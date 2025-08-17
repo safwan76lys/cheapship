@@ -1,0 +1,177 @@
+# ===============================================
+# 🚀 CHEAPSHIP - GITIGNORE COMPLET
+# ===============================================
+
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment Variables (IMPORTANT!)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.staging
+
+# ===============================================
+# 📁 UPLOADS & USER FILES (SENSIBLE!)
+# ===============================================
+uploads/
+uploads/*
+temp/
+tmp/
+*.tmp
+
+# Documents utilisateurs (photos d'identité, etc.)
+uploads/profiles/
+uploads/documents/
+uploads/parcels/
+
+# ===============================================
+# 🗄️ DATABASE & LOGS
+# ===============================================
+*.log
+logs/
+*.db
+*.sqlite
+*.sqlite3
+
+# Prisma
+# Garder le schema mais pas les migrations en dev
+# prisma/migrations/
+# !prisma/migrations/.gitkeep
+
+# ===============================================
+# 🏗️ BUILD & DIST
+# ===============================================
+dist/
+build/
+.next/
+out/
+
+# ===============================================
+# 💻 IDE & EDITOR
+# ===============================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ===============================================
+# 🖥️ OS FILES
+# ===============================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Icon?
+
+# ===============================================
+# 🔐 SECURITY & KEYS
+# ===============================================
+# JWT Keys
+private.key
+public.key
+*.pem
+*.key
+
+# SSL Certificates
+*.crt
+*.cert
+
+# ===============================================
+# 📊 RUNTIME & CACHE
+# ===============================================
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# ===============================================
+# 🧪 TESTING & COVERAGE
+# ===============================================
+coverage/
+*.lcov
+.nyc_output/
+test-results/
+playwright-report/
+
+# ===============================================
+# 📦 PACKAGE MANAGERS
+# ===============================================
+.yarn/
+.pnp.*
+.yarnrc.yml
+
+# ===============================================
+# 🐳 DOCKER & DEPLOYMENT
+# ===============================================
+.docker/
+docker-compose.override.yml
+Dockerfile.dev
+
+# ===============================================
+# 🔧 TOOLS & UTILITIES
+# ===============================================
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Archive files
+*.zip
+*.tar.gz
+*.rar
+
+# ===============================================
+# 📱 MOBILE (pour plus tard)
+# ===============================================
+# React Native
+.expo/
+.expo-shared/
+
+# ===============================================
+# 🌐 FRONTEND (pour plus tard)
+# ===============================================
+# Vite
+.vite/
+
+# ===============================================
+# 📋 PROJECT SPECIFIC
+# ===============================================
+# Documentation générée
+docs/generated/
+
+# Fichiers de config locaux
+config.local.js
+config.local.json
+
+# Scripts de développement personnel
+scripts/dev/
+scripts/personal/
+
+# ===============================================
+# 🚫 NEVER COMMIT THESE!
+# ===============================================
+# Mots de passe en clair
+passwords.txt
+secrets.txt
+credentials.json
+
+# Données de test avec informations réelles
+test-data-real.json
+production-dump.sql

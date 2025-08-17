@@ -1,0 +1,361 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                       String                    @id @default(cuid())
+  email                    String                    @unique
+  password                 String
+  fullName                 String
+  phone                    String?
+  emailVerified            Boolean                   @default(false)
+  phoneVerified            Boolean                   @default(false)
+  profilePicture           String?
+  rating                   Float                     @default(0)
+  totalRatings             Int                       @default(0)
+  isActive                 Boolean                   @default(true)
+  role                     UserRole                  @default(USER)
+  verificationToken        String?                   @unique
+  verificationExpires      DateTime?
+  resetPasswordToken       String?                   @unique
+  resetPasswordExpires     DateTime?
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  lastLoginAt              DateTime?
+  address                  String?
+  birthDate                DateTime?
+  city                     String?
+  country                  String?                   @default("France")
+  identityDocument         String?
+  identityVerified         Boolean                   @default(false)
+  identityVerifiedAt       DateTime?
+  postalCode               String?
+  items                    Item[]                    @relation("ItemOwner")
+  receivedMessages         Message[]                 @relation("MessageReceiver")
+  sentMessages             Message[]                 @relation("MessageSender")
+  reviews                  Review[]                  @relation("ReviewAuthor")
+  receivedReviews          Review[]                  @relation("ReviewReceiver")
+  trips                    Trip[]                    @relation("TripOwner")
+  conversationParticipants ConversationParticipant[]
+  favorites                Favorite[]
+  notifications            Notification[]
+  alerts              Alert[]
+  alertNotifications  AlertNotification[]
+  @@index([email])
+}
+
+model Trip {
+  id               String         @id @default(cuid())
+  userId           String
+  departureCity    String
+  departureCountry String
+  arrivalCity      String
+  arrivalCountry   String
+  departureDate    DateTime
+  arrivalDate      DateTime
+  availableWeight  Float
+  pricePerKg       Float
+  description      String?
+  status           TripStatus     @default(ACTIVE)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  items            Item[]
+  reviews          Review[]
+  user             User           @relation("TripOwner", fields: [userId], references: [id])
+  conversations    Conversation[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Item {
+  id              String         @id @default(cuid())
+  userId          String
+  tripId          String?
+  name            String
+  description     String
+  weight          Float
+  value           Float
+  category        String
+  images          String[]
+  pickupCity      String
+  pickupCountry   String
+  deliveryCity    String
+  deliveryCountry String
+  status          ItemStatus     @default(PENDING)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  deliveryDate    DateTime
+  fragile         Boolean        @default(false)
+  insurance       Boolean        @default(false)
+  maxPrice        Float?
+  notes           String?
+  pickupDate      DateTime
+  urgency         String         @default("normal")
+  trip            Trip?          @relation(fields: [tripId], references: [id])
+  user            User           @relation("ItemOwner", fields: [userId], references: [id])
+  conversations   Conversation[]
+  favorites       Favorite[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([pickupCity, deliveryCity])
+}
+
+model Message {
+  id             String        @id @default(cuid())
+  senderId       String
+  receiverId     String
+  content        String
+  read           Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  attachments    String[]      @default([])
+  conversationId String?
+  messageType    MessageType   @default(TEXT)
+  metadata       Json?
+  readAt         DateTime?
+  replyToId      String?
+  status         MessageStatus @default(SENT)
+  updatedAt      DateTime      @default(now()) @updatedAt
+  conversation   Conversation? @relation(fields: [conversationId], references: [id])
+  receiver       User          @relation("MessageReceiver", fields: [receiverId], references: [id])
+  replyTo        Message?      @relation("MessageReply", fields: [replyToId], references: [id])
+  replies        Message[]     @relation("MessageReply")
+  sender         User          @relation("MessageSender", fields: [senderId], references: [id])
+
+  @@index([senderId, receiverId])
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  authorId   String
+  receiverId String
+  tripId     String?
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+  author     User     @relation("ReviewAuthor", fields: [authorId], references: [id])
+  receiver   User     @relation("ReviewReceiver", fields: [receiverId], references: [id])
+  trip       Trip?    @relation(fields: [tripId], references: [id])
+
+  @@unique([authorId, receiverId, tripId])
+  @@index([authorId])
+  @@index([receiverId])
+}
+
+model Conversation {
+  id            String                    @id @default(cuid())
+  tripId        String?
+  itemId        String?
+  type          ConversationType          @default(NEGOTIATION)
+  status        ConversationStatus        @default(ACTIVE)
+  lastMessageAt DateTime                  @default(now())
+  createdAt     DateTime                  @default(now())
+  updatedAt     DateTime                  @updatedAt
+  messages      Message[]
+  participants  ConversationParticipant[]
+  item          Item?                     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  trip          Trip?                     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id             String          @id @default(cuid())
+  conversationId String
+  userId         String
+  role           ParticipantRole @default(MEMBER)
+  joinedAt       DateTime        @default(now())
+  lastReadAt     DateTime        @default(now())
+  muted          Boolean         @default(false)
+  conversation   Conversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@map("conversation_participants")
+}
+
+model Favorite {
+  id        String       @id @default(cuid())
+  userId    String
+  itemId    String?
+  tripId    String?
+  type      FavoriteType
+  createdAt DateTime     @default(now())
+  item      Item?        @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, itemId])
+  @@unique([userId, tripId])
+  @@map("favorites")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  title     String
+  content   String
+  type      NotificationType
+  relatedId String?
+  metadata  Json?
+  read      Boolean          @default(false)
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  MODERATOR
+}
+
+enum TripStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum ItemStatus {
+  PENDING
+  ASSIGNED
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+}
+
+enum ConversationType {
+  NEGOTIATION
+  SUPPORT
+  GROUP
+}
+
+enum ConversationStatus {
+  ACTIVE
+  CLOSED
+  ARCHIVED
+}
+
+enum ParticipantRole {
+  ADMIN
+  MODERATOR
+  MEMBER
+}
+
+enum MessageType {
+  TEXT
+  OFFER
+  ACCEPTANCE
+  REJECTION
+  SYSTEM
+  FILE
+  IMAGE
+}
+
+enum MessageStatus {
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+enum FavoriteType {
+  ITEM
+  TRIP
+  USER
+}
+
+enum NotificationType {
+  MESSAGE
+  OFFER
+  ACCEPTANCE
+  REJECTION
+  TRIP_UPDATE
+  SYSTEM
+  REMINDER
+}
+model Alert {
+  id                String      @id @default(cuid())
+  userId            String
+  type              AlertType   // FLIGHT_NEEDED, PARCEL_NEEDED
+  status            AlertStatus @default(ACTIVE)
+  
+  // Critères de recherche
+  departureCity     String
+  arrivalCity       String?     // Optionnel pour les vols
+  departureDate     DateTime?   // Date approximative
+  departureDateFlex Int?        // Flexibilité en jours (±7, ±15...)
+  maxPrice          Float?
+  maxWeight         Float?      // Pour les colis
+  description       String?
+  
+  // Géolocalisation avec rayon 500km
+  departureLat      Float?
+  departureLng      Float?
+  radius            Int         @default(500) // en km
+  
+  // Métadata
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  expiresAt         DateTime?   // Expiration auto de l'alerte
+  
+  // Relations
+  user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notifications     AlertNotification[]
+  
+  @@map("alerts")
+}
+
+model AlertNotification {
+  id          String                   @id @default(cuid())
+  alertId     String
+  userId      String                  // Le user qui a créé l'alerte
+  triggeredBy String                  // L'ID du vol/colis qui a déclenché
+  triggerType AlertTriggerType        // FLIGHT, PARCEL
+  status      AlertNotificationStatus @default(PENDING)
+  
+  // Contenu de la notification
+  title       String
+  message     String
+  actionUrl   String?                 // Lien vers le vol/colis
+  
+  createdAt   DateTime                @default(now())
+  viewedAt    DateTime?
+  
+  // Relations
+  alert       Alert                   @relation(fields: [alertId], references: [id], onDelete: Cascade)
+  user        User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("alert_notifications")
+}
+
+enum AlertType {
+  FLIGHT_NEEDED  // User cherche un vol
+  PARCEL_NEEDED  // User cherche à envoyer un colis
+}
+
+enum AlertStatus {
+  ACTIVE
+  PAUSED
+  EXPIRED
+  DELETED
+}
+
+enum AlertTriggerType {
+  FLIGHT
+  PARCEL
+}
+
+enum AlertNotificationStatus {
+  PENDING
+  SENT
+  VIEWED
+  CLICKED
+}

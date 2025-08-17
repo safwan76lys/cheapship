@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{title}} - Cheapship</title>
+    <style>
+        /* Reset et base */
+        body, table, td, p, a, li, blockquote {
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f5f7fa;
+        }
+        
+        table {
+            border-collapse: collapse;
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+        
+        img {
+            border: 0;
+            height: auto;
+            line-height: 100%;
+            outline: none;
+            text-decoration: none;
+        }
+        
+        /* Container principal */
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Header avec gradient */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        
+        .header .emoji {
+            font-size: 48px;
+            margin-bottom: 15px;
+            display: block;
+        }
+        
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        
+        .header .subtitle {
+            margin: 0;
+            font-size: 16px;
+            opacity: 0.9;
+            font-weight: 400;
+        }
+        
+        /* Contenu principal */
+        .content {
+            padding: 40px 30px;
+            background-color: #ffffff;
+        }
+        
+        .content h2 {
+            color: #2d3748;
+            font-size: 24px;
+            font-weight: 600;
+            margin: 0 0 20px 0;
+            line-height: 1.3;
+        }
+        
+        .content p {
+            color: #4a5568;
+            font-size: 16px;
+            line-height: 1.6;
+            margin: 0 0 20px 0;
+        }
+        
+        /* Boîte de détails de l'alerte */
+        .alert-details {
+            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 25px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .alert-details::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .alert-details .alert-message {
+            font-family: 'Courier New', monospace;
+            font-size: 15px;
+            line-height: 1.7;
+            color: #2d3748;
+            white-space: pre-line;
+            margin: 0;
+            padding-left: 15px;
+        }
+        
+        /* Bouton call-to-action */
+        .cta-container {
+            text-align: center;
+            margin: 35px 0;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white !important;
+            text-decoration: none !important;
+            padding: 16px 32px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 16px;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            text-transform: uppercase;
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        /* Section informative */
+        .info-section {
+            background-color: #f7fafc;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 25px 0;
+            border-left: 4px solid #4299e1;
+        }
+        
+        .info-section h3 {
+            color: #2b6cb0;
+            font-size: 18px;
+            margin: 0 0 10px 0;
+            font-weight: 600;
+        }
+        
+        .info-section p {
+            margin: 0;
+            color: #4a5568;
+            font-size: 14px;
+        }
+        
+        /* Footer */
+        .footer {
+            background-color: #2d3748;
+            color: #a0aec0;
+            padding: 30px;
+            text-align: center;
+            border-radius: 0 0 12px 12px;
+        }
+        
+        .footer .logo-section {
+            margin-bottom: 20px;
+        }
+        
+        .footer .logo-section h3 {
+            color: #ffffff;
+            font-size: 24px;
+            margin: 0 0 5px 0;
+            font-weight: 700;
+        }
+        
+        .footer .tagline {
+            font-size: 14px;
+            margin: 0 0 20px 0;
+            opacity: 0.8;
+        }
+        
+        .footer .links {
+            margin: 20px 0;
+        }
+        
+        .footer .links a {
+            color: #4299e1;
+            text-decoration: none;
+            margin: 0 15px;
+            font-size: 14px;
+        }
+        
+        .footer .unsubscribe {
+            font-size: 12px;
+            color: #718096;
+            margin-top: 20px;
+        }
+        
+        .footer .unsubscribe a {
+            color: #4299e1;
+            text-decoration: none;
+        }
+        
+        /* Responsive */
+        @media only screen and (max-width: 600px) {
+            .email-container {
+                margin: 10px;
+                border-radius: 8px;
+            }
+            
+            .header, .content {
+                padding: 25px 20px;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .alert-details {
+                padding: 20px;
+                margin: 20px 0;
+            }
+            
+            .cta-button {
+                padding: 14px 28px;
+                font-size: 15px;
+            }
+        }
+        
+        /* Mode sombre */
+        @media (prefers-color-scheme: dark) {
+            .content {
+                background-color: #1a202c;
+            }
+            
+            .content h2, .alert-details .alert-message {
+                color: #e2e8f0;
+            }
+            
+            .content p {
+                color: #a0aec0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div style="background-color: #f5f7fa; padding: 20px 0;">
+        <div class="email-container">
+            <!-- Header -->
+            <div class="header">
+                <span class="emoji">🔔</span>
+                <h1>Alerte Cheapship</h1>
+                <p class="subtitle">Une nouvelle offre correspond à vos critères !</p>
+            </div>
+            
+            <!-- Contenu principal -->
+            <div class="content">
+                <h2>Bonjour {{userName}} !</h2>
+                
+                <p><strong>Excellente nouvelle !</strong> Nous avons trouvé une offre qui correspond parfaitement aux critères de votre alerte.</p>
+                
+                <!-- Détails de l'alerte -->
+                <div class="alert-details">
+                    <p class="alert-message">{{message}}</p>
+                </div>
+                
+                <!-- Section informative -->
+                <div class="info-section">
+                    <h3>🚀 Que faire maintenant ?</h3>
+                    <p>Cliquez sur le bouton ci-dessous pour voir tous les détails de cette offre et contacter directement la personne. Plus vous réagissez vite, plus vous avez de chances de sécuriser cette opportunité !</p>
+                </div>
+                
+                <p>Cette offre correspond à l'alerte que vous avez configurée sur Cheapship. Ne la laissez pas passer ! Les meilleures offres partent rapidement.</p>
+                
+                <!-- Bouton call-to-action -->
+                <div class="cta-container">
+                    <a href="{{actionUrl}}" class="cta-button">
+                        🚀 Voir l'offre et contacter
+                    </a>
+                </div>
+                
+                <p style="font-size: 14px; color: #718096;">
+                    <strong>Astuce :</strong> Préparez votre message de contact à l'avance pour être le premier à répondre !
+                </p>
+            </div>
+            
+            <!-- Footer -->
+            <div class="footer">
+                <div class="logo-section">
+                    <h3>✈️ Cheapship</h3>
+                    <p class="tagline">La plateforme de transport collaboratif</p>
+                </div>
+                
+                <p style="margin: 0; font-size: 14px;">
+                    🌍 Connectons les voyageurs et les expéditeurs partout en Europe
+                </p>
+                
+                <div class="links">
+                    <a href="https://cheapship.fr">Site web</a>
+                    <a href="https://cheapship.fr/help">Aide</a>
+                    <a href="https://cheapship.fr/contact">Contact</a>
+                </div>
+                
+                <div class="unsubscribe">
+                    <p>
+                        Vous recevez cet email car vous avez créé une alerte sur Cheapship.<br>
+                        <a href="{{unsubscribeUrl}}">Se désabonner des alertes</a> | 
+                        <a href="https://cheapship.fr/privacy">Politique de confidentialité</a>
+                    </p>
+                </div>
+                
+                <p style="margin-top: 20px; font-size: 12px;">
+                    © 2025 Cheapship. Tous droits réservés.<br>
+                    Lyon, France
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
