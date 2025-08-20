@@ -52,5 +52,8 @@ router.get('/document/:filename', (req, res) => {
     res.status(404).json({ error: 'Document non trouvé' });
   }
 });
+// Routes pour l'IA de documents
+router.get('/ai-stats', userController.getAIStats);
+router.post('/test-ai', upload.single('document'), userController.testAI);
 
 module.exports = router;

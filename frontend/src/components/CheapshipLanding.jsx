@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom'; // ✅ AJOUTER CET IMPORT
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Plane, Package, MapPin, ArrowRight, Star, Shield, Clock, Users, TrendingUp, 
   Menu, X, ChevronDown, Search, Filter, Navigation, Target, Globe, Loader,
@@ -17,27 +17,47 @@ const CheapshipLanding = () => {
   const [locationLoading, setLocationLoading] = useState(true);
   const [gpsEnabled, setGpsEnabled] = useState(false);
   
-  const navigate = useNavigate(); // ✅ Hook React Router
+  const navigate = useNavigate();
   
-  // ✅ UNE SEULE DÉCLARATION de handleActionClick
-  const handleActionClick = () => {
-    console.log("🚀 Navigation vers /auth");
-    navigate('/auth');
-  };
-
+  // ✅ SOLUTION : Contrôle des re-montages avec des refs
+  const initializationRef = useRef(false);
+  const locationFetchedRef = useRef(false);
+  
   // API Configuration
   const API_BASE = 'http://localhost:4000/api';
 
+  // ✅ Navigation sécurisée avec React Router
+  const handleActionClick = useCallback(() => {
+    console.log("🎯 handleActionClick déclenché depuis Landing");
+    
+    const token = localStorage.getItem('token');
+    
+    if (token) {
+      console.log("🚀 Utilisateur connecté - Navigation vers /dashboard");
+      navigate('/dashboard');
+    } else {
+      console.log("🚀 Utilisateur non connecté - Navigation vers /auth");
+      navigate('/auth');
+    }
+  }, [navigate]);
+
+  // ✅ Initialisation unique contrôlée
   useEffect(() => {
-    console.log("🎯 CheapshipLanding component mounted - Navigation ready");
-    initializeLocation();
+    if (!initializationRef.current) {
+      console.log("🎯 CheapshipLanding - Initialisation unique");
+      initializationRef.current = true;
+      initializeLocation();
+    }
   }, []);
 
-  // ... le reste de votre code reste identique ...
-
-
   // Initialisation de la géolocalisation
-  const initializeLocation = async () => {
+  const initializeLocation = useCallback(async () => {
+    if (locationFetchedRef.current) {
+      console.log("⚠️ Géolocalisation déjà en cours, abandon");
+      return;
+    }
+    
+    locationFetchedRef.current = true;
     setLocationLoading(true);
     
     try {
@@ -92,10 +112,10 @@ const CheapshipLanding = () => {
       console.error('Erreur initialisation géolocalisation:', error);
       setDefaultLocation();
     }
-  };
+  }, []);
 
   // Fallback sur géolocalisation IP
-  const fallbackToIP = async () => {
+  const fallbackToIP = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE}/location`);
       const data = await response.json();
@@ -120,10 +140,10 @@ const CheapshipLanding = () => {
       console.error('Erreur géolocalisation IP:', error);
       setDefaultLocation();
     }
-  };
+  }, []);
 
   // Location par défaut (Lyon)
-  const setDefaultLocation = () => {
+  const setDefaultLocation = useCallback(() => {
     const defaultLocation = {
       city: 'Lyon',
       country: 'France',
@@ -136,16 +156,21 @@ const CheapshipLanding = () => {
     setUserLocation(defaultLocation);
     setGpsEnabled(false);
     fetchLocalData(defaultLocation);
-  };
+  }, []);
 
   // Récupération des données locales avec l'API
-  const fetchLocalData = async (location) => {
+  const fetchLocalData = useCallback(async (location) => {
+    console.log("🔍 Récupération des données locales pour:", location.city);
+    
     try {
       const radius = 300;
       
-      // ✅ APPEL API RÉEL POUR LES VOLS
+      // APPEL API RÉEL POUR LES VOLS
       try {
-        const flightsResponse = await fetch(`${API_BASE}/trips/nearby?lat=${location.latitude}&lng=${location.longitude}&radius=${radius}`);
+        const flightsResponse = await fetch(
+          `${API_BASE}/trips/nearby?lat=${location.latitude}&lng=${location.longitude}&radius=${radius}`
+        );
+        
         if (flightsResponse.ok) {
           const flightsData = await flightsResponse.json();
           if (flightsData.success && flightsData.trips) {
@@ -173,6 +198,8 @@ const CheapshipLanding = () => {
               distance: trip.distance ? `${trip.distance} km` : 'N/A'
             }));
             setNearbyFlights(formattedFlights);
+          } else {
+            setNearbyFlights(getFallbackFlights(location));
           }
         } else {
           setNearbyFlights(getFallbackFlights(location));
@@ -182,9 +209,12 @@ const CheapshipLanding = () => {
         setNearbyFlights(getFallbackFlights(location));
       }
 
-      // ✅ APPEL API RÉEL POUR LES COLIS
+      // APPEL API RÉEL POUR LES COLIS
       try {
-        const parcelsResponse = await fetch(`${API_BASE}/parcels/nearby?lat=${location.latitude}&lng=${location.longitude}&radius=${radius}`);
+        const parcelsResponse = await fetch(
+          `${API_BASE}/parcels/nearby?lat=${location.latitude}&lng=${location.longitude}&radius=${radius}`
+        );
+        
         if (parcelsResponse.ok) {
           const parcelsData = await parcelsResponse.json();
           if (parcelsData.success && parcelsData.parcels) {
@@ -205,6 +235,8 @@ const CheapshipLanding = () => {
               distance: parcel.distance ? `${parcel.distance} km` : 'N/A'
             }));
             setNearbyParcels(formattedParcels);
+          } else {
+            setNearbyParcels(getFallbackParcels(location));
           }
         } else {
           setNearbyParcels(getFallbackParcels(location));
@@ -222,10 +254,10 @@ const CheapshipLanding = () => {
       setLoading(false);
       setLocationLoading(false);
     }
-  };
+  }, []);
 
   // Données de fallback
-  const getFallbackFlights = (location) => {
+  const getFallbackFlights = useCallback((location) => {
     return [
       {
         id: 1,
@@ -261,9 +293,9 @@ const CheapshipLanding = () => {
         distance: '25 km'
       }
     ];
-  };
+  }, []);
 
-  const getFallbackParcels = (location) => {
+  const getFallbackParcels = useCallback((location) => {
     return [
       {
         id: 1,
@@ -299,13 +331,16 @@ const CheapshipLanding = () => {
         distance: '22 km'
       }
     ];
-  };
+  }, []);
 
-  const refreshLocation = () => {
+  // Refresh contrôlé
+  const refreshLocation = useCallback(() => {
+    console.log("🔄 Refresh demandé");
+    locationFetchedRef.current = false;
     setLocationLoading(true);
     setLoading(true);
     initializeLocation();
-  };
+  }, [initializeLocation]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -881,9 +916,9 @@ const CheapshipLanding = () => {
               <h3 className="font-semibold mb-4">Support</h3>
               <ul className="space-y-2 text-gray-400">
                 <li><a href="#aide" className="hover:text-white transition-colors">Centre d'aide</a></li>
-                <li><button onClick={handleActionClick} className="hover:text-white transition-colors">Nous contacter</button></li>
-                <li><button onClick={handleActionClick} className="hover:text-white transition-colors">Conditions d'utilisation</button></li>
-                <li><button onClick={handleActionClick} className="hover:text-white transition-colors">Politique de confidentialité</button></li>
+                <li><button onClick={() => navigate('/help')} className="hover:text-white transition-colors">Nous contacter</button></li>
+                <li><button onClick={() => navigate('/terms')} className="hover:text-white transition-colors">Conditions d'utilisation</button></li>
+                <li><button onClick={() => navigate('/privacy')} className="hover:text-white transition-colors">Politique de confidentialité</button></li>
               </ul>
             </div>
           </div>

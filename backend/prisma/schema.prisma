@@ -41,11 +41,14 @@ model User {
   reviews                  Review[]                  @relation("ReviewAuthor")
   receivedReviews          Review[]                  @relation("ReviewReceiver")
   trips                    Trip[]                    @relation("TripOwner")
+  alertNotifications       AlertNotification[]
+  alerts                   Alert[]
   conversationParticipants ConversationParticipant[]
   favorites                Favorite[]
   notifications            Notification[]
-  alerts              Alert[]
-  alertNotifications  AlertNotification[]
+  identityVerificationStatus String? @default("pending")
+  aiAnalysisResult           String?
+
   @@index([email])
 }
 
@@ -211,6 +214,48 @@ model Notification {
   @@map("notifications")
 }
 
+model Alert {
+  id                String              @id @default(cuid())
+  userId            String
+  type              AlertType
+  status            AlertStatus         @default(ACTIVE)
+  departureCity     String
+  arrivalCity       String?
+  departureDate     DateTime?
+  departureDateFlex Int?
+  maxPrice          Float?
+  maxWeight         Float?
+  description       String?
+  departureLat      Float?
+  departureLng      Float?
+  radius            Int                 @default(500)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  expiresAt         DateTime?
+  notifications     AlertNotification[]
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("alerts")
+}
+
+model AlertNotification {
+  id          String                  @id @default(cuid())
+  alertId     String
+  userId      String
+  triggeredBy String
+  triggerType AlertTriggerType
+  status      AlertNotificationStatus @default(PENDING)
+  title       String
+  message     String
+  actionUrl   String?
+  createdAt   DateTime                @default(now())
+  viewedAt    DateTime?
+  alert       Alert                   @relation(fields: [alertId], references: [id], onDelete: Cascade)
+  user        User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("alert_notifications")
+}
+
 enum UserRole {
   USER
   ADMIN
@@ -281,64 +326,10 @@ enum NotificationType {
   SYSTEM
   REMINDER
 }
-model Alert {
-  id                String      @id @default(cuid())
-  userId            String
-  type              AlertType   // FLIGHT_NEEDED, PARCEL_NEEDED
-  status            AlertStatus @default(ACTIVE)
-  
-  // Critères de recherche
-  departureCity     String
-  arrivalCity       String?     // Optionnel pour les vols
-  departureDate     DateTime?   // Date approximative
-  departureDateFlex Int?        // Flexibilité en jours (±7, ±15...)
-  maxPrice          Float?
-  maxWeight         Float?      // Pour les colis
-  description       String?
-  
-  // Géolocalisation avec rayon 500km
-  departureLat      Float?
-  departureLng      Float?
-  radius            Int         @default(500) // en km
-  
-  // Métadata
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
-  expiresAt         DateTime?   // Expiration auto de l'alerte
-  
-  // Relations
-  user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  notifications     AlertNotification[]
-  
-  @@map("alerts")
-}
-
-model AlertNotification {
-  id          String                   @id @default(cuid())
-  alertId     String
-  userId      String                  // Le user qui a créé l'alerte
-  triggeredBy String                  // L'ID du vol/colis qui a déclenché
-  triggerType AlertTriggerType        // FLIGHT, PARCEL
-  status      AlertNotificationStatus @default(PENDING)
-  
-  // Contenu de la notification
-  title       String
-  message     String
-  actionUrl   String?                 // Lien vers le vol/colis
-  
-  createdAt   DateTime                @default(now())
-  viewedAt    DateTime?
-  
-  // Relations
-  alert       Alert                   @relation(fields: [alertId], references: [id], onDelete: Cascade)
-  user        User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@map("alert_notifications")
-}
 
 enum AlertType {
-  FLIGHT_NEEDED  // User cherche un vol
-  PARCEL_NEEDED  // User cherche à envoyer un colis
+  FLIGHT_NEEDED
+  PARCEL_NEEDED
 }
 
 enum AlertStatus {

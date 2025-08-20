@@ -16,9 +16,13 @@ import {
   AlertCircle,
   Loader,
   Eye,
-  Download
+  Download,
+  Send,
+  RefreshCw,
+  Clock
 } from 'lucide-react'
 
+// ✅ CORRECTION : Utiliser le bon port du backend (4000)
 const API_URL = 'http://localhost:4000/api'
 
 function UserProfile() {
@@ -29,6 +33,17 @@ function UserProfile() {
   const [uploadingDocument, setUploadingDocument] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  
+  // ✅ AJOUT : États pour la vérification email
+  const [emailStatus, setEmailStatus] = useState({
+    emailVerified: false,
+    email: ''
+  })
+  const [isResendingEmail, setIsResendingEmail] = useState(false)
+  const [emailMessage, setEmailMessage] = useState('')
+  const [emailMessageType, setEmailMessageType] = useState('')
+  const [lastEmailSent, setLastEmailSent] = useState(null)
+  const [canResendEmail, setCanResendEmail] = useState(true)
   
   const photoInputRef = useRef(null)
   const documentInputRef = useRef(null)
@@ -45,6 +60,7 @@ function UserProfile() {
 
   useEffect(() => {
     fetchUserProfile()
+    loadEmailStatus()
   }, [])
 
   const fetchUserProfile = async () => {
@@ -58,6 +74,10 @@ function UserProfile() {
       if (response.ok) {
         const userData = await response.json()
         setUser(userData)
+        setEmailStatus({
+          emailVerified: userData.emailVerified || false,
+          email: userData.email || ''
+        })
         setFormData({
           fullName: userData.fullName || '',
           phone: userData.phone || '',
@@ -73,6 +93,76 @@ function UserProfile() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // ✅ AJOUT : Charger le statut email
+  const loadEmailStatus = async () => {
+    try {
+      const response = await fetch(`${API_URL}/auth/email-status`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setEmailStatus(data)
+      }
+    } catch (error) {
+      console.error('Erreur chargement statut email:', error)
+    }
+  }
+
+  // ✅ AJOUT : Renvoyer email de vérification
+  const handleResendVerification = async () => {
+    setIsResendingEmail(true)
+    setEmailMessage('')
+    setCanResendEmail(false)
+
+    try {
+      const response = await fetch(`${API_URL}/auth/resend-verification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setEmailMessage('Email de vérification envoyé avec succès ! Vérifiez votre boîte mail.')
+        setEmailMessageType('success')
+        setLastEmailSent(new Date())
+        
+        // Délai de 60 secondes avant de pouvoir renvoyer
+        setTimeout(() => setCanResendEmail(true), 60000)
+        
+      } else {
+        setEmailMessage(data.error || 'Erreur lors de l\'envoi de l\'email')
+        setEmailMessageType('error')
+        setCanResendEmail(true)
+      }
+    } catch (error) {
+      setEmailMessage('Erreur de connexion au serveur')
+      setEmailMessageType('error')
+      setCanResendEmail(true)
+    } finally {
+      setIsResendingEmail(false)
+    }
+  }
+
+  // ✅ AJOUT : Calculer le temps depuis le dernier envoi
+  const getTimeSinceEmailSent = () => {
+    if (!lastEmailSent) return null
+    
+    const seconds = Math.floor((Date.now() - lastEmailSent.getTime()) / 1000)
+    if (seconds < 60) return `Envoyé il y a ${seconds}s`
+    
+    const minutes = Math.floor(seconds / 60)
+    if (minutes < 60) return `Envoyé il y a ${minutes}min`
+    
+    return `Envoyé il y a ${Math.floor(minutes / 60)}h`
   }
 
   const handleSaveProfile = async () => {
@@ -130,9 +220,6 @@ function UserProfile() {
 
       if (response.ok) {
         const data = await response.json()
-        console.log('📸 Photo upload response:', data)
-        
-        // Mettre à jour l'état avec le nouveau nom de fichier
         setUser(prev => ({ 
           ...prev, 
           profilePicture: data.profilePicture 
@@ -159,7 +246,7 @@ function UserProfile() {
     const file = e.target.files[0]
     if (!file) return
 
-    console.log('📄 Fichier sélectionné:', file.name, file.type, file.size);
+    console.log('📄 Fichier sélectionné:', file.name, file.type, file.size)
 
     if (file.size > 5 * 1024 * 1024) {
       setError('Le document ne doit pas dépasser 5MB')
@@ -172,7 +259,7 @@ function UserProfile() {
     const formData = new FormData()
     formData.append('document', file)
 
-    console.log('📤 Envoi vers:', `${API_URL}/users/profile/identity`);
+    console.log('📤 Envoi vers:', `${API_URL}/users/profile/identity`)
 
     try {
       const response = await fetch(`${API_URL}/users/profile/identity`, {
@@ -183,15 +270,11 @@ function UserProfile() {
         body: formData
       })
 
-      console.log('📥 Response status:', response.status);
+      console.log('📥 Response status:', response.status)
       const data = await response.json()
-      console.log('📥 Response data:', data);
+      console.log('📥 Response data:', data)
 
       if (response.ok) {
-        const data = await response.json()
-        console.log('📄 Document upload response:', data)
-        
-        // Mettre à jour l'état avec le nouveau document
         setUser(prev => ({ 
           ...prev, 
           identityDocument: data.identityDocument 
@@ -206,7 +289,7 @@ function UserProfile() {
         setError(data.error || 'Erreur lors de l\'upload')
       }
     } catch (error) {
-      console.error('❌ Erreur upload document:', error);
+      console.error('❌ Erreur upload document:', error)
       setError('Erreur lors de l\'upload du document')
     } finally {
       setUploadingDocument(false)
@@ -240,13 +323,12 @@ function UserProfile() {
                     className="w-full h-full object-cover"
                     crossOrigin="anonymous"
                     onError={(e) => {
-                      console.error('Erreur chargement image via API, essai direct...');
-                      // Fallback vers l'URL directe
-                      e.target.src = `http://localhost:4000/uploads/profiles/${user.profilePicture}?t=${Date.now()}`;
-                      e.target.crossOrigin = "anonymous";
+                      console.error('Erreur chargement image via API, essai direct...')
+                      e.target.src = `http://localhost:3001/uploads/profiles/${user.profilePicture}?t=${Date.now()}`
+                      e.target.crossOrigin = "anonymous"
                     }}
                     onLoad={() => {
-                      console.log('✅ Image chargée:', user.profilePicture);
+                      console.log('✅ Image chargée:', user.profilePicture)
                     }}
                   />
                 ) : (
@@ -290,11 +372,11 @@ function UserProfile() {
                 </div>
                 
                 <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${
-                  user?.emailVerified ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'
+                  emailStatus.emailVerified ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'
                 }`}>
-                  {user?.emailVerified ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+                  {emailStatus.emailVerified ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
                   <span className="text-sm font-medium">
-                    {user?.emailVerified ? 'Email vérifié' : 'Email non vérifié'}
+                    {emailStatus.emailVerified ? 'Email vérifié' : 'Email non vérifié'}
                   </span>
                 </div>
 
@@ -319,6 +401,86 @@ function UserProfile() {
             </button>
           </div>
         </div>
+
+        {/* ✅ AJOUT : Section Vérification Email */}
+        {!emailStatus.emailVerified && (
+          <div className="bg-orange-50 border border-orange-200 rounded-2xl p-6 mb-8">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="text-orange-600" size={20} />
+              </div>
+              
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-orange-800">Email non vérifié</h3>
+                  <Shield className="text-orange-500" size={18} />
+                </div>
+                
+                <p className="text-orange-700 text-sm mb-4">
+                  Votre adresse email <strong>{emailStatus.email}</strong> n'a pas encore été vérifiée. 
+                  Vérifiez votre boîte mail ou demandez un nouveau lien de vérification.
+                </p>
+
+                {emailMessage && (
+                  <div className={`mb-4 p-3 rounded-lg flex items-center gap-2 text-sm ${
+                    emailMessageType === 'success' 
+                      ? 'bg-green-100 text-green-700 border border-green-200' 
+                      : 'bg-red-100 text-red-700 border border-red-200'
+                  }`}>
+                    {emailMessageType === 'success' ? (
+                      <CheckCircle size={16} />
+                    ) : (
+                      <AlertCircle size={16} />
+                    )}
+                    {emailMessage}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs text-orange-600">
+                    {lastEmailSent && (
+                      <>
+                        <Clock size={14} />
+                        <span>{getTimeSinceEmailSent()}</span>
+                      </>
+                    )}
+                  </div>
+                  
+                  <button
+                    onClick={handleResendVerification}
+                    disabled={isResendingEmail || !canResendEmail}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+                      isResendingEmail || !canResendEmail
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'bg-orange-600 text-white hover:bg-orange-700 hover:shadow-md'
+                    }`}
+                  >
+                    {isResendingEmail ? (
+                      <>
+                        <RefreshCw className="animate-spin" size={16} />
+                        Envoi en cours...
+                      </>
+                    ) : (
+                      <>
+                        <Send size={16} />
+                        {canResendEmail ? 'Renvoyer l\'email' : `Attendre ${Math.ceil((60000 - (Date.now() - (lastEmailSent?.getTime() || 0))) / 1000)}s`}
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <div className="mt-4 p-3 bg-orange-100 rounded-lg">
+                  <h4 className="font-medium text-orange-800 text-sm mb-2">💡 Conseils :</h4>
+                  <ul className="text-orange-700 text-xs space-y-1">
+                    <li>• Vérifiez votre dossier spam/courrier indésirable</li>
+                    <li>• Le lien de vérification expire après 24 heures</li>
+                    <li>• Vous pouvez demander un nouveau lien toutes les 60 secondes</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Messages d'état */}
         {error && (
@@ -457,7 +619,12 @@ function UserProfile() {
               <div className="space-y-4">
                 <div className="flex items-center gap-3 py-3">
                   <Mail className="text-gray-400" size={20} />
-                  <span className="text-gray-900">{user?.email}</span>
+                  <span className="text-gray-900">{emailStatus.email}</span>
+                  {emailStatus.emailVerified ? (
+                    <CheckCircle className="text-green-500" size={16} />
+                  ) : (
+                    <AlertCircle className="text-orange-500" size={16} />
+                  )}
                 </div>
 
                 {user?.phone && (
@@ -551,10 +718,10 @@ function UserProfile() {
                         })
                         .then(response => response.blob())
                         .then(blob => {
-                          const url = window.URL.createObjectURL(blob);
-                          window.open(url, '_blank');
+                          const url = window.URL.createObjectURL(blob)
+                          window.open(url, '_blank')
                         })
-                        .catch(err => console.error('Erreur ouverture document:', err));
+                        .catch(err => console.error('Erreur ouverture document:', err))
                       }}
                       className="flex items-center gap-2 text-blue-600 hover:text-blue-800 transition-colors"
                     >
@@ -570,16 +737,16 @@ function UserProfile() {
                         })
                         .then(response => response.blob())
                         .then(blob => {
-                          const url = window.URL.createObjectURL(blob);
-                          const a = document.createElement('a');
-                          a.href = url;
-                          a.download = user.identityDocument;
-                          document.body.appendChild(a);
-                          a.click();
-                          document.body.removeChild(a);
-                          window.URL.revokeObjectURL(url);
+                          const url = window.URL.createObjectURL(blob)
+                          const a = document.createElement('a')
+                          a.href = url
+                          a.download = user.identityDocument
+                          document.body.appendChild(a)
+                          a.click()
+                          document.body.removeChild(a)
+                          window.URL.revokeObjectURL(url)
                         })
-                        .catch(err => console.error('Erreur téléchargement:', err));
+                        .catch(err => console.error('Erreur téléchargement:', err))
                       }}
                       className="flex items-center gap-2 text-blue-600 hover:text-blue-800 transition-colors"
                     >
@@ -670,4 +837,5 @@ function UserProfile() {
   )
 }
 
+// ✅ CORRECTION : Export par défaut
 export default UserProfile

@@ -260,7 +260,7 @@ router.get('/wallet', async (req, res) => {
 // 🎯 MÉTRIQUES DE PERFORMANCE PUBLIQUE
 // ================================
 
-router.get('/public-stats/:userId?', async (req, res) => {
+router.get('/public-stats/:userId', async (req, res) => {
   try {
     const targetUserId = req.params.userId || req.user.id;
     

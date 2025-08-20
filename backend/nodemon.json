@@ -1,0 +1,25 @@
+{
+  "watch": [
+    "routes",
+    "config",
+    "middleware",
+    "controllers",
+    "services",
+    "server.js"
+  ],
+  "ignore": [
+    "node_modules",
+    "uploads",
+    "logs",
+    "*.log",
+    ".git",
+    "prisma/migrations"
+  ],
+  "ext": "js,json",
+  "delay": "2000",
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "restartable": "rs",
+  "verbose": true
+}

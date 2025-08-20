@@ -23,16 +23,24 @@ const httpServer = http.createServer(app);
 // Rate limiting
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limite par IP
+  max: 1000, // ✅ TRÈS ÉLEVÉ pour éviter les 429 en dev
   message: 'Trop de requêtes, réessayez plus tard',
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  skip: (req) => {
+    // ✅ Ignorer complètement le rate limiting en développement
+    return process.env.NODE_ENV === 'development';
+  }
 });
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5, // limite stricte pour auth
-  message: 'Trop de tentatives de connexion'
+  max: 1000, // ✅ TRÈS ÉLEVÉ pour éviter les blocages
+  message: 'Trop de tentatives de connexion',
+  skip: (req) => {
+    // ✅ Ignorer complètement en développement
+    return process.env.NODE_ENV === 'development';
+  }
 });
 
 // Security headers
@@ -168,8 +176,11 @@ try {
 try {
   analyticsRoutes = require('./routes/analytics');
   console.log('✅ Analytics routes found');
+  console.log('✅ Analytics routes type:', typeof analyticsRoutes);
 } catch (error) {
   console.warn('⚠️ Analytics routes not found - créez routes/analytics.js');
+  console.error('❌ Erreur complète:', error.message);
+  console.error('❌ Stack:', error.stack);
 }
 
 // Routes optionnelles supplémentaires
@@ -317,7 +328,7 @@ if (process.env.NODE_ENV === 'development') {
       console.log(`   • ${varName}: ❌ Non défini`);
     }
   });
-} {
+ } else {
   app.use(morgan('combined'));
 }
 

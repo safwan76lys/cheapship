@@ -52,9 +52,22 @@ const uploadLimiter = rateLimit({
   legacyHeaders: false
 });
 
+// ✅ NOUVEAU : Rate limiter pour la vérification email
+const resendVerificationLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 1, // 1 tentative par minute par IP
+  message: {
+    error: 'Trop de tentatives. Veuillez attendre 1 minute avant de renvoyer un email.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: false // Compte toutes les tentatives
+});
+
 module.exports = {
   apiLimiter,
   authLimiter,
   messageLimiter,
-  uploadLimiter
+  uploadLimiter,
+  resendVerificationLimiter // ✅ AJOUT
 };

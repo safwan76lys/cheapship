@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 
-// Import des composants existants
+// Import des composants
 import CheapshipLanding from './components/CheapshipLanding';
 import AuthPage from './components/AuthPage';
 import Dashboard from './components/Dashboard';
@@ -13,11 +13,9 @@ import TripsManagement from './components/TripsManagement';
 import ParcelsManagement from './components/ParcelsManagement';
 import TripEditForm from './components/TripEditForm';
 import ParcelEditForm from './components/ParcelEditForm';
-import CityAutocompleteTest from './components/CityAutocompleteSimple';
-import AlertsManagement from './components/AlertsManagement';
+import socketService from './services/socketService'
 
-// Import Socket.IO seulement pour les pages connectées
-// import socketService from './services/socketService';
+// import AlertsManagement from './components/AlertsManagement';
 
 // Composant principal avec Router
 const AppContent = () => {
@@ -27,83 +25,110 @@ const AppContent = () => {
   
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // ✅ AJOUT : États pour la vérification d'email (garder les vôtres)
+  const [isVerifyingEmail, setIsVerifyingEmail] = useState(false)
+  const [verificationMessage, setVerificationMessage] = useState('')
 
   useEffect(() => {
-    // Vérifier l'authentification au démarrage
+    console.log("🔍 Vérification authentification au démarrage...");
+    
+    // ✅ AMÉLIORATION : Vérifier l'authentification avec validation token backend
     const checkAuth = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    const userData = localStorage.getItem('user');
+    
+    // ✅ VALIDATION du token avant utilisation
+    if (!token || token === 'null' || token === 'undefined' || token.length < 10) {
+      console.log("❌ Token invalide ou manquant, nettoyage...");
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setLoading(false);
+      return;
+    }
+    
+    if (token && userData) {
+      console.log("✅ Token trouvé, validation avec le backend...");
+      
       try {
-        const token = localStorage.getItem('token');
-        if (token) {
-          // Optionnel : vérifier la validité du token avec l'API
-          // const response = await fetch('/api/auth/verify', {
-          //   headers: { 'Authorization': `Bearer ${token}` }
-          // });
-          // if (response.ok) {
-          //   const userData = await response.json();
-          //   setUser(userData);
-          //   setIsAuthenticated(true);
-          // }
-          
-          // Version simplifiée pour la démo
+        const response = await fetch('http://localhost:4000/api/auth/me', {
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const backendUserData = await response.json();
+          console.log("✅ Token valide, restauration session");
+          setUser(backendUserData.user);
           setIsAuthenticated(true);
-          setUser({ id: '1', email: 'user@example.com' });
+          
+          // Socket.IO conditionnel
+          if (location.pathname !== '/' && location.pathname !== '/auth' && 
+              location.pathname !== '/help' && location.pathname !== '/terms' && 
+              location.pathname !== '/privacy') {
+            socketService.connect(token);
+          }
+        } else {
+          console.log("❌ Token invalide (status:", response.status, "), nettoyage...");
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
         }
-      } catch (error) {
-        console.error('Erreur vérification auth:', error);
+      } catch (tokenError) {
+        console.error('❌ Erreur validation token:', tokenError);
+        console.log("🧹 Nettoyage du localStorage à cause de l'erreur");
         localStorage.removeItem('token');
-      } finally {
-        setLoading(false);
+        localStorage.removeItem('user');
       }
-    };
+    } else {
+      console.log("❌ Pas de token, utilisateur non connecté");
+    }
+  } catch (error) {
+    console.error('Erreur vérification auth:', error);
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+  } finally {
+    setLoading(false);
+  }
+};
 
     checkAuth();
-  }, []);
-
-  useEffect(() => {
-    // Initialiser Socket.IO SEULEMENT pour les pages connectées
-    if (isAuthenticated && !isLandingPage()) {
-      // socketService.connect();
-      console.log('🔌 Socket.IO connecté pour utilisateur authentifié');
-    }
-
-    return () => {
-
-
-      // Déconnecter Socket.IO lors du nettoyage
-      // if (isAuthenticated) {
-      //   socketService.disconnect();
-      // }
-    };
-  }, [isAuthenticated, location.pathname]);
-
-  // Vérifier si on est sur la landing page
-  const isLandingPage = () => {
-    return location.pathname === '/' || location.pathname === '/landingpage';
-  };
+  }, []); // ✅ GARDÉ votre logique, juste améliorée
 
   const handleLogin = (token, userData) => {
+    console.log('✅ Connexion réussie:', userData);
     localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
     setIsAuthenticated(true);
     
+    // ✅ AJOUT : Socket.IO après connexion
+    socketService.connect(token);
+    
     // Rediriger vers le dashboard après connexion
-    navigate('/dashboard');
+    navigate('/dashboard', { replace: true });
   };
 
   const handleLogout = () => {
+    console.log('👋 Déconnexion utilisateur');
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setUser(null);
     setIsAuthenticated(false);
     
-    // Déconnecter Socket.IO
-    // socketService.disconnect();
+    // ✅ AJOUT : Déconnexion Socket.IO
+    socketService.disconnect();
     
     // Rediriger vers la landing page
-    navigate('/');
+    navigate('/', { replace: true });
   };
 
   // Composant pour protéger les routes privées
   const PrivateRoute = ({ children }) => {
+    console.log("🔐 Vérification route privée - Auth:", isAuthenticated);
+    
     if (loading) {
       return (
         <div className="min-h-screen flex items-center justify-center">
@@ -112,11 +137,18 @@ const AppContent = () => {
       );
     }
     
-    return isAuthenticated ? children : <Navigate to="/auth" replace />;
+    if (!isAuthenticated) {
+      console.log("❌ Accès refusé - Redirection vers /auth");
+      return <Navigate to="/auth" replace />;
+    }
+    
+    return children;
   };
 
-  // Composant pour rediriger les utilisateurs connectés
+  // Composant pour rediriger les utilisateurs connectés des pages publiques
   const PublicRoute = ({ children }) => {
+    console.log("🌐 Vérification route publique - Auth:", isAuthenticated);
+    
     if (loading) {
       return (
         <div className="min-h-screen flex items-center justify-center">
@@ -125,7 +157,12 @@ const AppContent = () => {
       );
     }
     
-    return !isAuthenticated ? children : <Navigate to="/dashboard" replace />;
+    if (isAuthenticated && location.pathname === '/auth') {
+      console.log("✅ Utilisateur connecté sur /auth - Redirection vers /dashboard");
+      return <Navigate to="/dashboard" replace />;
+    }
+    
+    return children;
   };
 
   if (loading) {
@@ -144,16 +181,14 @@ const AppContent = () => {
       <Routes>
         {/* ===== PAGES PUBLIQUES ===== */}
         
-        {/* Landing Page - Pas de Socket.IO */}
+        {/* Landing Page */}
         <Route 
           path="/" 
-          element={<CheapshipLanding />} 
-        />
-        
-        {/* Alias pour la landing page */}
-        <Route 
-          path="/landingpage" 
-          element={<Navigate to="/" replace />} 
+          element={
+            <PublicRoute>
+              <CheapshipLanding />
+            </PublicRoute>
+          } 
         />
         
         {/* Page d'authentification */}
@@ -261,14 +296,7 @@ const AppContent = () => {
             </PrivateRoute>
           } 
         />
-        <Route 
-          path="/alerts" 
-          element={
-            <PrivateRoute>
-              <AlertsManagement user={user} />
-            </PrivateRoute>
-          } 
-/>
+
         {/* ===== PAGES FUTURES (PRÉPARÉES) ===== */}
         
         {/* Page de recherche */}
@@ -356,6 +384,12 @@ const AppContent = () => {
               <div className="text-center">
                 <h1 className="text-2xl font-bold text-gray-900 mb-4">❓ Centre d'aide</h1>
                 <p className="text-gray-600">FAQ et support à développer</p>
+                <button 
+                  onClick={() => navigate('/')}
+                  className="mt-4 text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  ← Retour à l'accueil
+                </button>
               </div>
             </div>
           } 
@@ -369,6 +403,12 @@ const AppContent = () => {
               <div className="text-center">
                 <h1 className="text-2xl font-bold text-gray-900 mb-4">📋 Conditions d'utilisation</h1>
                 <p className="text-gray-600">CGU à rédiger</p>
+                <button 
+                  onClick={() => navigate('/')}
+                  className="mt-4 text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  ← Retour à l'accueil
+                </button>
               </div>
             </div>
           } 
@@ -382,11 +422,17 @@ const AppContent = () => {
               <div className="text-center">
                 <h1 className="text-2xl font-bold text-gray-900 mb-4">🔒 Politique de confidentialité</h1>
                 <p className="text-gray-600">Politique de confidentialité à rédiger</p>
+                <button 
+                  onClick={() => navigate('/')}
+                  className="mt-4 text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  ← Retour à l'accueil
+                </button>
               </div>
             </div>
           } 
         />
-<Route path="/test-cities" element={<CityAutocompleteTest />} />
+
         {/* ===== GESTION DES ERREURS ===== */}
         
         {/* Page 404 - redirige vers la landing */}
@@ -399,8 +445,10 @@ const AppContent = () => {
   );
 };
 
-// Composant principal App avec Router
+// ✅ COMPOSANT PRINCIPAL APP AVEC ROUTER (inchangé)
 function App() {
+  console.log("🚀 App.jsx - Démarrage avec React Router");
+  
   return (
     <Router>
       <AppContent />
