@@ -71,6 +71,7 @@
     "express-validator": "^7.2.1",
     "express-winston": "^4.2.0",
     "helmet": "^8.1.0",
+    "itty-router": "^5.0.22",
     "joi": "^18.0.0",
     "json-2-csv": "^5.5.9",
     "jsonwebtoken": "^9.0.2",
@@ -92,6 +93,7 @@
     "winston": "^3.17.0"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250821.0",
     "@eslint/js": "^9.33.0",
     "@types/jest": "^30.0.0",
     "artillery": "^2.0.24",

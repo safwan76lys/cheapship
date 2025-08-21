@@ -11,6 +11,10 @@ const { scheduleAlertCleanup } = require('./jobs/alertCleanup');
 const { setupAlertSocket } = require('./socket/alertSocket');
 
 const app = express();
+
+// Configuration trust proxy pour Render
+app.set('trust proxy', true);
+
 const PORT = process.env.PORT || 4000;
 
 // Créer le serveur HTTP pour Socket.IO
