@@ -4,248 +4,267 @@ import { io } from 'socket.io-client';
 import { API_CONFIG } from '../config/api';
 
 class SocketService {
- constructor() {
-   this.socket = null;
-   this.connected = false;
-   this.listeners = new Map();
- }
+  constructor() {
+    this.socket = null;
+    this.connected = false;
+    this.listeners = new Map();
+  }
 
- // Connexion Socket.IO avec token JWT
- connect(token) {
-   if (this.socket?.connected) {
-     return this.socket;
-   }
+  // Connexion Socket.IO avec token JWT
+  connect(token) {
+    if (this.socket?.connected) {
+      return this.socket;
+    }
 
-   console.log('Connecting to Socket.IO server...');
+    console.log('Connecting to Socket.IO server...');
 
-   // ✅ MODIFICATION : Utiliser API_CONFIG au lieu d'URL hardcodée
-   const SOCKET_URL = API_CONFIG.socketURL;
+    // ✅ MODIFICATION : Utiliser API_CONFIG au lieu d'URL hardcodée
+    const SOCKET_URL = API_CONFIG.socketURL;
 
-   this.socket = io(SOCKET_URL, {
-     auth: {
-       token: token
-     },
-     transports: ['websocket', 'polling'],
-     timeout: 10000, // Augmenté pour Render
-     forceNew: true,
-     upgrade: true,
-     rememberUpgrade: true
-   });
+    this.socket = io(SOCKET_URL, {
+      auth: {
+        token: token
+      },
+      transports: ['websocket', 'polling'],
+      timeout: 30000, // ✅ Augmenté à 30s pour Render gratuit
+      forceNew: true,
+      upgrade: true,
+      rememberUpgrade: true,
+      reconnection: true,        // ✅ AJOUTÉ
+      reconnectionAttempts: 5,   // ✅ AJOUTÉ 
+      reconnectionDelay: 1000    // ✅ AJOUTÉ
+    });
 
-   this.setupEventListeners();
-   return this.socket;
- }
+    this.setupEventListeners();
 
- // Configuration des événements de base
- setupEventListeners() {
-   this.socket.on('connect', () => {
-     console.log('Connected to Socket.IO server');
-     this.connected = true;
-   });
+    // Ajout de l'écouteur de reconnexion
+    this.socket.on('reconnect', (attemptNumber) => {
+      console.log(`Reconnected after ${attemptNumber} attempts`);
+      this.connected = true;
+    });
 
-   this.socket.on('disconnect', (reason) => {
-     console.log('Disconnected from Socket.IO server:', reason);
-     this.connected = false;
-   });
+    this.socket.on('reconnect_error', (error) => {
+      console.warn('Reconnection error:', error.message);
+    });
 
-   this.socket.on('error', (error) => {
-     console.error('Socket.IO error:', error);
-   });
+    this.socket.on('connect_error', (error) => {
+      console.error('Socket.IO connection error:', error);
+      
+      // ✅ Message spécial pour la production Render
+      if (API_CONFIG.socketURL.includes('onrender.com')) {
+        console.log('⏳ Render service might be starting up, retrying...');
+      }
+    });
 
-   this.socket.on('connect_error', (error) => {
-     console.error('Socket.IO connection error:', error);
-   });
+    return this.socket;
+  }
 
-   // Événements de chat
-   this.socket.on('new_message', (message) => {
-     console.log('New message received:', message);
-   });
+  // Configuration des événements de base
+  setupEventListeners() {
+    this.socket.on('connect', () => {
+      console.log('Connected to Socket.IO server');
+      this.connected = true;
+    });
 
-   this.socket.on('user_typing', (data) => {
-     console.log('User typing:', data.userName);
-   });
+    this.socket.on('disconnect', (reason) => {
+      console.log('Disconnected from Socket.IO server:', reason);
+      this.connected = false;
+    });
 
-   this.socket.on('user_stop_typing', (data) => {
-     console.log('User stopped typing:', data.userId);
-   });
+    this.socket.on('error', (error) => {
+      console.error('Socket.IO error:', error);
+    });
 
-   // Événements de notifications
-   this.socket.on('new_notification', (notification) => {
-     console.log('New notification:', notification);
-   });
- }
+    // Événements de chat
+    this.socket.on('new_message', (message) => {
+      console.log('New message received:', message);
+    });
 
- // MÉTHODES DE CHAT
- joinConversation(conversationId) {
-   if (this.socket?.connected) {
-     this.socket.emit('join_conversation', conversationId);
-     console.log(`Joining conversation: ${conversationId}`);
-   }
- }
+    this.socket.on('user_typing', (data) => {
+      console.log('User typing:', data.userName);
+    });
 
- leaveConversation(conversationId) {
-   if (this.socket?.connected) {
-     this.socket.emit('leave_conversation', conversationId);
-     console.log(`Leaving conversation: ${conversationId}`);
-   }
- }
+    this.socket.on('user_stop_typing', (data) => {
+      console.log('User stopped typing:', data.userId);
+    });
 
- sendMessage(conversationId, content, messageType = 'TEXT', metadata = null) {
-   if (this.socket?.connected) {
-     this.socket.emit('send_message', {
-       conversationId,
-       content,
-       messageType,
-       metadata
-     });
-     console.log(`Sending message to conversation ${conversationId}`);
-   } else {
-     console.warn('Cannot send message: not connected to Socket.IO');
-   }
- }
+    // Événements de notifications
+    this.socket.on('new_notification', (notification) => {
+      console.log('New notification:', notification);
+    });
+  }
 
- markMessageAsRead(conversationId, messageId) {
-   if (this.socket?.connected) {
-     this.socket.emit('mark_read', {
-       conversationId,
-       messageId
-     });
-   }
- }
+  // MÉTHODES DE CHAT
+  joinConversation(conversationId) {
+    if (this.socket?.connected) {
+      this.socket.emit('join_conversation', conversationId);
+      console.log(`Joining conversation: ${conversationId}`);
+    }
+  }
 
- // INDICATEURS DE FRAPPE
- startTyping(conversationId) {
-   if (this.socket?.connected) {
-     this.socket.emit('typing_start', { conversationId });
-   }
- }
+  leaveConversation(conversationId) {
+    if (this.socket?.connected) {
+      this.socket.emit('leave_conversation', conversationId);
+      console.log(`Leaving conversation: ${conversationId}`);
+    }
+  }
 
- stopTyping(conversationId) {
-   if (this.socket?.connected) {
-     this.socket.emit('typing_stop', { conversationId });
-   }
- }
+  sendMessage(conversationId, content, messageType = 'TEXT', metadata = null) {
+    if (this.socket?.connected) {
+      this.socket.emit('send_message', {
+        conversationId,
+        content,
+        messageType,
+        metadata
+      });
+      console.log(`Sending message to conversation ${conversationId}`);
+    } else {
+      console.warn('Cannot send message: not connected to Socket.IO');
+    }
+  }
 
- // NOTIFICATIONS
- getUnreadNotifications() {
-   if (this.socket?.connected) {
-     this.socket.emit('get_unread_notifications');
-   }
- }
+  markMessageAsRead(conversationId, messageId) {
+    if (this.socket?.connected) {
+      this.socket.emit('mark_read', {
+        conversationId,
+        messageId
+      });
+    }
+  }
 
- markNotificationAsRead(notificationId) {
-   if (this.socket?.connected) {
-     this.socket.emit('mark_notification_read', notificationId);
-   }
- }
+  // INDICATEURS DE FRAPPE
+  startTyping(conversationId) {
+    if (this.socket?.connected) {
+      this.socket.emit('typing_start', { conversationId });
+    }
+  }
 
- // ÉCOUTEURS D'ÉVÉNEMENTS
- onNewMessage(callback) {
-   if (this.socket) {
-     this.socket.on('new_message', callback);
-     this.addListener('new_message', callback);
-   }
- }
+  stopTyping(conversationId) {
+    if (this.socket?.connected) {
+      this.socket.emit('typing_stop', { conversationId });
+    }
+  }
 
- onUserTyping(callback) {
-   if (this.socket) {
-     this.socket.on('user_typing', callback);
-     this.addListener('user_typing', callback);
-   }
- }
+  // NOTIFICATIONS
+  getUnreadNotifications() {
+    if (this.socket?.connected) {
+      this.socket.emit('get_unread_notifications');
+    }
+  }
 
- onUserStopTyping(callback) {
-   if (this.socket) {
-     this.socket.on('user_stop_typing', callback);
-     this.addListener('user_stop_typing', callback);
-   }
- }
+  markNotificationAsRead(notificationId) {
+    if (this.socket?.connected) {
+      this.socket.emit('mark_notification_read', notificationId);
+    }
+  }
 
- onMessageRead(callback) {
-   if (this.socket) {
-     this.socket.on('message_read', callback);
-     this.addListener('message_read', callback);
-   }
- }
+  // ÉCOUTEURS D'ÉVÉNEMENTS
+  onNewMessage(callback) {
+    if (this.socket) {
+      this.socket.on('new_message', callback);
+      this.addListener('new_message', callback);
+    }
+  }
 
- onNewNotification(callback) {
-   if (this.socket) {
-     this.socket.on('new_notification', callback);
-     this.addListener('new_notification', callback);
-   }
- }
+  onUserTyping(callback) {
+    if (this.socket) {
+      this.socket.on('user_typing', callback);
+      this.addListener('user_typing', callback);
+    }
+  }
 
- onUnreadNotifications(callback) {
-   if (this.socket) {
-     this.socket.on('unread_notifications', callback);
-     this.addListener('unread_notifications', callback);
-   }
- }
+  onUserStopTyping(callback) {
+    if (this.socket) {
+      this.socket.on('user_stop_typing', callback);
+      this.addListener('user_stop_typing', callback);
+    }
+  }
 
- // GESTION DES LISTENERS
- addListener(event, callback) {
-   if (!this.listeners.has(event)) {
-     this.listeners.set(event, []);
-   }
-   this.listeners.get(event).push(callback);
- }
+  onMessageRead(callback) {
+    if (this.socket) {
+      this.socket.on('message_read', callback);
+      this.addListener('message_read', callback);
+    }
+  }
 
- on(event, callback) {
-   if (this.socket) {
-     this.socket.on(event, callback);
-     this.addListener(event, callback);
-   }
- }
+  onNewNotification(callback) {
+    if (this.socket) {
+      this.socket.on('new_notification', callback);
+      this.addListener('new_notification', callback);
+    }
+  }
 
- off(event, callback) {
-   if (this.socket) {
-     this.socket.off(event, callback);
+  onUnreadNotifications(callback) {
+    if (this.socket) {
+      this.socket.on('unread_notifications', callback);
+      this.addListener('unread_notifications', callback);
+    }
+  }
+
+  // GESTION DES LISTENERS
+  addListener(event, callback) {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, []);
+    }
+    this.listeners.get(event).push(callback);
+  }
+
+  on(event, callback) {
+    if (this.socket) {
+      this.socket.on(event, callback);
+      this.addListener(event, callback);
+    }
+  }
+
+  off(event, callback) {
+    if (this.socket) {
+      this.socket.off(event, callback);
      
-     const eventListeners = this.listeners.get(event);
-     if (eventListeners) {
-       const index = eventListeners.indexOf(callback);
-       if (index > -1) {
-         eventListeners.splice(index, 1);
-       }
-     }
-   }
- }
+      const eventListeners = this.listeners.get(event);
+      if (eventListeners) {
+        const index = eventListeners.indexOf(callback);
+        if (index > -1) {
+          eventListeners.splice(index, 1);
+        }
+      }
+    }
+  }
 
- // UTILITAIRES
- isConnected() {
-   return this.socket?.connected || false;
- }
+  // UTILITAIRES
+  isConnected() {
+    return this.socket?.connected || false;
+  }
 
- disconnect() {
-   if (this.socket) {
-     console.log('Disconnecting from Socket.IO...');
+  disconnect() {
+    if (this.socket) {
+      console.log('Disconnecting from Socket.IO...');
      
-     this.listeners.forEach((callbacks, event) => {
-       callbacks.forEach(callback => {
-         this.socket.off(event, callback);
-       });
-     });
-     this.listeners.clear();
+      this.listeners.forEach((callbacks, event) => {
+        callbacks.forEach(callback => {
+          this.socket.off(event, callback);
+        });
+      });
+      this.listeners.clear();
 
-     this.socket.disconnect();
-     this.socket = null;
-     this.connected = false;
-     console.log('Socket.IO disconnected');
-   }
- }
+      this.socket.disconnect();
+      this.socket = null;
+      this.connected = false;
+      console.log('Socket.IO disconnected');
+    }
+  }
 
- reconnect(token) {
-   this.disconnect();
-   return this.connect(token);
- }
+  reconnect(token) {
+    this.disconnect();
+    return this.connect(token);
+  }
 
- getConnectionStatus() {
-   return {
-     connected: this.connected,
-     socketId: this.socket?.id || null,
-     transport: this.socket?.io?.engine?.transport?.name || null
-   };
- }
+  getConnectionStatus() {
+    return {
+      connected: this.connected,
+      socketId: this.socket?.id || null,
+      transport: this.socket?.io?.engine?.transport?.name || null
+    };
+  }
 }
 
 // Instance singleton
