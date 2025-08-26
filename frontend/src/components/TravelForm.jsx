@@ -17,7 +17,7 @@ import {
   X
 } from 'lucide-react'
 
-const API_URL = 'http://localhost:4000/api'
+const API_URL = 'https://cheapship-backend.onrender.com/api';
 
 function TravelForm() {
   const [loading, setLoading] = useState(false)

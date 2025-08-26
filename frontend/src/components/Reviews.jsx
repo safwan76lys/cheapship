@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Star, User } from 'lucide-react'
-import { API_URL } from '../config'
+import { API_URL } from "../config/api";
 
 function Reviews({ userId }) {
   const [reviews, setReviews] = useState([])

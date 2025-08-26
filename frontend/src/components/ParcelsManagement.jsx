@@ -25,7 +25,7 @@ import {
 import ParcelEditForm from './ParcelEditForm'
 import ParcelMatching from './ParcelMatching'
 
-const API_URL = 'http://localhost:4000/api'
+const API_URL = 'https://cheapship-backend.onrender.com/api';
 
 // Statuts des colis avec couleurs
 const PARCEL_STATUSES = {

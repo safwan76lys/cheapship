@@ -15,7 +15,7 @@ const PhonePrefixSelector = ({
   const [filteredPrefixes, setFilteredPrefixes] = useState([]);
   
   const dropdownRef = useRef(null);
-  const API_BASE = 'http://localhost:4000/api';
+  const API_BASE = 'https://cheapship-backend.onrender.com/api';
 
   // Charger les préfixes au démarrage
   useEffect(() => {

@@ -15,7 +15,7 @@ const CityAutocompleteSimple = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:4000/api/cities/search?q=${query}&limit=5`);
+      const response = await fetch(`https://cheapship-backend.onrender.com/api/cities/search?q=${query}&limit=5`);
       const data = await response.json();
       
       console.log('Réponse API:', data); // Pour débug

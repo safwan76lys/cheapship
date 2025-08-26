@@ -14,7 +14,8 @@ import MessagingSystem from './MessagingSystem'
 import GeographicSearch from './GeographicSearch'
 import AlertsManagement from './AlertsManagement'
 
-const API_URL = 'http://localhost:4000/api'
+const API_URL = 'https://cheapship-backend.onrender.com/api'
+
 
 // Composant Analytics
 function AnalyticsDashboard({ user }) {

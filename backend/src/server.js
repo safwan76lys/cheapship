@@ -56,20 +56,42 @@ app.use(helmet({
 // ================================
 // CORS CONFIGURATION
 // ================================
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
-  'http://127.0.0.1:3000',
-  'https://cheapship.vercel.app' // Pour la production
-];
+const allowedOrigins = (() => {
+  const origins = [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:3000'
+  ];
+
+  // URLs de production pour Render
+  if (process.env.NODE_ENV === 'production') {
+    // URL frontend Render (sera mise à jour après déploiement)
+    origins.push('https://cheapship-frontend.onrender.com');
+    
+    // URL backend pour Socket.IO self-reference
+    if (process.env.RENDER_EXTERNAL_URL) {
+      origins.push(`https://${process.env.RENDER_EXTERNAL_URL}`);
+    }
+    
+    // Variable d'environnement custom
+    if (process.env.FRONTEND_URL) {
+      origins.push(process.env.FRONTEND_URL);
+    }
+  }
+
+  console.log('CORS Origins configurées:', origins);
+  return origins;
+})();
 
 const corsOptions = {
   origin: (origin, callback) => {
+    // Autoriser les requêtes sans origin (apps mobiles, Postman)
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      console.warn(`CORS rejeté pour: ${origin}`);
+      callback(new Error(`Origin non autorisée: ${origin}`));
     }
   },
   credentials: true,
@@ -83,8 +105,14 @@ app.use(cors(corsOptions));
 // ================================
 // SOCKET.IO SETUP
 // ================================
+// Configuration Socket.IO
 const io = require('socket.io')(httpServer, {
-  cors: corsOptions
+  cors: corsOptions,
+  transports: ['websocket', 'polling'],
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  upgradeTimeout: 30000,
+  allowEIO3: true
 });
 
 let socketService;
@@ -1135,8 +1163,13 @@ if (process.env.NODE_ENV !== 'test') {
       console.log(`   • Live analytics updates: ✅`);
       console.log(`   • Chat messaging: ${messageRoutes ? '✅' : '⏳'}`);
       console.log(`   • Alert notifications: ${alertSocketManager ? '✅' : '⏳'}`);
-      console.log(`   • Connection URL: ws://localhost:${PORT}`);
-    }
+
+      // URL dynamique selon l'environnement
+      const socketUrl = process.env.NODE_ENV === 'production' 
+     ? `wss://${process.env.RENDER_EXTERNAL_URL || 'votre-app.onrender.com'}`
+     : `ws://localhost:${PORT}`;
+      console.log(`   • Connection URL: ${socketUrl}`);
+      }
     
     console.log(`\n🔐 Security & Performance:`);
     console.log(`   • Rate limiting: ✅ (100 req/15min general, 5 req/15min auth)`);

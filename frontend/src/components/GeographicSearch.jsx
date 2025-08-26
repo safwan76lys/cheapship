@@ -7,7 +7,7 @@ import {
   Send, Download
 } from 'lucide-react';
 
-const API_URL = 'http://localhost:4000/api';
+const API_URL = 'https://cheapship-backend.onrender.com/api';
 
 // Villes populaires françaises et européennes
 const POPULAR_CITIES = [

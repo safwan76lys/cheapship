@@ -24,7 +24,7 @@ const CheapshipLanding = () => {
   const locationFetchedRef = useRef(false);
   
   // API Configuration
-  const API_BASE = 'http://localhost:4000/api';
+  const API_BASE = 'https://cheapship-backend.onrender.com/api';
 
   // ✅ Navigation sécurisée avec React Router
   const handleActionClick = useCallback(() => {
