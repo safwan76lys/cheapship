@@ -16,7 +16,7 @@ import {
   ArrowLeft
 } from 'lucide-react'
 
-const API_URL = 'https://cheapship-back-62ph.onrender.com/api';
+const API_URL = 'https://cheapship-backend.onrender.com/api'
 
 // Composant d'autocomplétion des villes avec API GeoNames
 const CityAutocomplete = ({ value, onChange, placeholder }) => {
@@ -38,7 +38,7 @@ const CityAutocomplete = ({ value, onChange, placeholder }) => {
 
     setIsLoading(true)
     try {
-      const response = await fetch(`http://api.geonames.org/searchJSON?q=${encodeURIComponent(searchQuery)}&maxRows=8&featureClass=P&orderby=population&username=cheapship`)
+      const response = await fetch(`https://api.geonames.org/searchJSON?q=${encodeURIComponent(searchQuery)}&maxRows=8&featureClass=P&orderby=population&username=cheapship`)
       const data = await response.json()
       
       if (data.geonames) {

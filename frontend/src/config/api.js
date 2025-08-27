@@ -79,7 +79,7 @@ export const apiCall = async (endpoint, options = {}) => {
 export const testBackendConnection = async () => {
   try {
     console.log(`🔍 Testing backend connection to: ${API_CONFIG.baseURL}`);
-    const response = await fetch(`${API_CONFIG.baseURL.replace('/api', '')}/health`);
+    const response = await fetch(`${API_CONFIG.baseURL}/health`);
     
     if (response.ok) {
       console.log('✅ Backend is reachable');

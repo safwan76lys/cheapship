@@ -7,7 +7,8 @@ import {
 } from 'lucide-react';
 // import socketService from '../services/socketService'; // Décommentez quand vous créez le service
 
-const API_URL = 'http://localhost:4000/api';
+const API_URL = 'https://cheapship-backend.onrender.com/api' ;
+
 
 // Mock data
 const mockConversations = [
