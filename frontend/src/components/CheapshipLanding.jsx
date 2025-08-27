@@ -68,7 +68,7 @@ const CheapshipLanding = () => {
             
             try {
               const response = await fetch(
-                `http://api.geonames.org/findNearbyPlaceNameJSON?lat=${latitude}&lng=${longitude}&maxRows=1&username=cheapship`
+                `https://api.geonames.org/findNearbyPlaceNameJSON?lat=${latitude}&lng=${longitude}&maxRows=1&username=cheapship`
               );
               const data = await response.json();
               
