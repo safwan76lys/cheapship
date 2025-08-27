@@ -14,7 +14,7 @@ import MessagingSystem from './MessagingSystem'
 import GeographicSearch from './GeographicSearch'
 import AlertsManagement from './AlertsManagement'
 
-const API_URL = 'https://cheapship-backend.onrender.com/api'
+const API_URL = 'https://cheapship-back-62ph.onrender.com/api'
 
 
 // Composant Analytics

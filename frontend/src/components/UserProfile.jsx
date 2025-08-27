@@ -23,7 +23,7 @@ import {
 } from 'lucide-react'
 
 // ✅ CORRECTION : Utiliser le bon port du backend (4000)
-const API_URL = 'https://cheapship-backend.onrender.com/api';
+const API_URL = 'https://cheapship-back-62ph.onrender.com/api';
 
 function UserProfile() {
   const [user, setUser] = useState(null)
