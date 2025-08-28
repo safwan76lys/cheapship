@@ -7,11 +7,11 @@ const isProduction = import.meta.env.PROD;
 // URLs dynamiques selon l'environnement
 export const API_CONFIG = {
   baseURL: isProduction 
-    ? 'https://cheapship-back-62ph.onrender.com/api'  // Votre URL Render actuelle
+    ? 'https://cheapship-back.onrender.com/api'  // Votre URL Render actuelle
     : 'http://localhost:4000/api',
     
   socketURL: isProduction
-    ? 'https://cheapship-back-62ph.onrender.com'      // Votre URL Render actuelle
+    ? 'https://cheapship-back.onrender.com'      // Votre URL Render actuelle
     : 'http://localhost:4000',
     
   timeout: 30000 // 30 secondes pour Render (services gratuits plus lents)
