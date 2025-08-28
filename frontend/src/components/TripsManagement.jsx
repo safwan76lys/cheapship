@@ -22,7 +22,7 @@ import {
 } from 'lucide-react'
 import TripEditForm from './TripEditForm'
 
-const API_URL = 'https://cheapship-backend.onrender.com/api'
+const API_URL = 'https://cheapship-back.onrender.com/api'
 
 // Statuts des voyages avec couleurs
 const TRIP_STATUSES = {

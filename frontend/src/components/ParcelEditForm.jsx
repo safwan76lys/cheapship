@@ -20,7 +20,7 @@ import {
   Upload
 } from 'lucide-react'
 
-const API_URL = 'https://cheapship-backend.onrender.com/api'
+const API_URL = 'https://cheapship-back.onrender.com/api'
 
 // Composant d'autocomplétion des villes avec API GeoNames
 const CityAutocomplete = ({ value, onChange, placeholder }) => {
