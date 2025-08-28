@@ -62,7 +62,7 @@ const allowedOrigins = (() => {
     'http://localhost:5173',
     'http://127.0.0.1:5173',
     'http://127.0.0.1:3000',
-    'https://cheapship-frontend.onrender.com'
+   'https://cheapship-frontend.onrender.com'
   ];
 
   // URLs de production pour Render
