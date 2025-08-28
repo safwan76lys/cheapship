@@ -20,9 +20,11 @@ class EmailService {
 
   async sendVerificationEmail(user, token) {
     // ✅ CORRECTION : URL correcte pour la vérification
-    const frontendUrl = process.env.NODE_ENV === 'production' 
-  ? 'https://cheapship-frontend.onrender.com'
-  : process.env.FRONTEND_URL || 'http://localhost:5173';
+    const frontendUrl = process.env.FRONTEND_URL 
+  ? process.env.FRONTEND_URL.replace(/\/$/, '') // enlève le / final si présent
+  : (process.env.NODE_ENV === 'production'
+      ? 'https://cheapship-frontend.onrender.com'
+      : 'http://localhost:5173');
 
 const verificationUrl = `${frontendUrl}/auth?token=${token}&verify=true`;
     
