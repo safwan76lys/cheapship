@@ -47,8 +47,8 @@ const CityAutocomplete = ({ value, onChange, placeholder }) => {
       const response = await fetch(`${API_URL}/cities/search?q=${encodeURIComponent(searchQuery)}`)
       const data = await response.json()
       
-      if (data.success && data.cities) {
-        const cities = data.cities.map(city => ({
+      if (data.geonames) {
+        const cities = data.geonames.map(city => ({
           name: city.name,
           countryName: city.countryName,
           adminName1: city.adminName1,
