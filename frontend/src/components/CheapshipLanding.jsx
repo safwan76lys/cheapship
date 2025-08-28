@@ -67,17 +67,15 @@ const CheapshipLanding = () => {
             const { latitude, longitude } = position.coords;
             
             try {
-              const response = await fetch(
-                `https://api.geonames.org/findNearbyPlaceNameJSON?lat=${latitude}&lng=${longitude}&maxRows=1&username=cheapship`
-              );
-              const data = await response.json();
-              
-              if (data.geonames && data.geonames.length > 0) {
-                const place = data.geonames[0];
-                const locationInfo = {
-                  city: place.name,
-                  country: place.countryName,
-                  region: place.adminName1,
+              const response = await fetch(`${API_BASE}/location/reverse?lat=${latitude}&lng=${longitude}`);
+const data = await response.json();
+
+if (data.geonames && data.geonames.length > 0) {
+  const place = data.geonames[0];
+  const locationInfo = {
+    city: place.name,
+    country: place.countryName,
+    region: place.adminName1 || 'Unknown',
                   latitude,
                   longitude,
                   accuracy: position.coords.accuracy
@@ -121,13 +119,13 @@ const CheapshipLanding = () => {
       const data = await response.json();
       
       if (data.success && data.location) {
-        const locationInfo = {
-          city: data.location.city,
-          country: data.location.country,
-          region: data.location.region,
-          latitude: data.location.latitude,
-          longitude: data.location.longitude,
-          accuracy: 10000
+  const locationInfo = {
+    city: data.location.city,
+    country: data.location.country,
+    region: data.location.region || 'Unknown',
+          latitude: data.location.coordinates.lat,    // Changé ici
+    longitude: data.location.coordinates.lng,   // Changé ici
+    accuracy: 10000
         };
         
         setUserLocation(locationInfo);

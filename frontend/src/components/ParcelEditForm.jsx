@@ -42,7 +42,7 @@ const CityAutocomplete = ({ value, onChange, placeholder }) => {
 
     setIsLoading(true)
     try {
-      const response = await fetch(`https://api.geonames.org/searchJSON?q=${encodeURIComponent(searchQuery)}&maxRows=8&featureClass=P&orderby=population&username=cheapship`)
+      const response = await fetch(`${API_URL}/cities/search?q=${encodeURIComponent(searchQuery)}`)
       const data = await response.json()
       
       if (data.geonames) {
