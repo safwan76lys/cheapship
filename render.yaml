@@ -1,10 +1,10 @@
 services:
-  - type: web
+  - type: static
     name: cheapship-frontend
-    env: static
     buildCommand: npm run build
-    staticPublishPath: ./dist
+    publishPath: ./dist
     routes:
       - type: rewrite
         src: /*
         dest: /index.html
+
