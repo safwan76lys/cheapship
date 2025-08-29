@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Mail, Lock, User, Phone, Eye, EyeOff, AlertCircle, CheckCircle, Loader, ArrowLeft } from 'lucide-react'
-import { API_URL } from '../config/api'
+import { API_URL } from '../config/api.js'
 import PhonePrefixSelector from './PhonePrefixSelector'
 
 function AuthPage({ onLogin }) {

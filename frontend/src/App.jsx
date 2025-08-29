@@ -16,7 +16,7 @@ import ParcelEditForm from './components/ParcelEditForm';
 import socketService from './services/socketService';
 
 // ✅ AJOUT : Import configuration API centralisée
-import { API_CONFIG } from './config/api';
+import { API_CONFIG } from './config/api.js';
 
 // Composant principal avec Router
 const AppContent = () => {
