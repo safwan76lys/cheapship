@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Mail, Lock, User, Phone, Eye, EyeOff, AlertCircle, CheckCircle, Loader, ArrowLeft } from 'lucide-react'
-import { API_URL } from '../config/api.js'
+import { API_CONFIG } from '../config/api.js'
 import PhonePrefixSelector from './PhonePrefixSelector'
 import SMSVerification from './SMSVerification';
 import { ChevronDown, Search } from 'lucide-react'; 
@@ -251,7 +251,7 @@ function AuthPage({ onLogin }) {
     setLoading(true)
 
     try {
-      const response = await fetch(`${API_URL}/auth/forgot-password`, {
+      const response = await fetch(`${API_CONFIG}/auth/forgot-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -294,7 +294,7 @@ function AuthPage({ onLogin }) {
     }
 
     try {
-      const response = await fetch(`${API_URL}/auth/reset-password`, {
+      const response = await fetch(`${API_CONFIG}/auth/reset-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -337,7 +337,7 @@ function AuthPage({ onLogin }) {
     setSuccess('')
     
     try {
-      const response = await fetch(`${API_URL}/auth/verify-email`, {
+      const response = await fetch(`${API_CONFIG}/auth/verify-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token })
@@ -352,7 +352,7 @@ function AuthPage({ onLogin }) {
         // Connexion automatique après vérification
         try {
           // Récupérer les données utilisateur mises à jour
-          const userResponse = await fetch(`${API_URL}/auth/me`, {
+          const userResponse = await fetch(`${API_CONFIG}/auth/me`, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
           })
           
@@ -404,7 +404,7 @@ function AuthPage({ onLogin }) {
     setResendSuccess('')
 
     try {
-      const resendResponse = await fetch(`${API_URL}/auth/resend-verification-public`, {
+      const resendResponse = await fetch(`${API_CONFIG}/auth/resend-verification-public`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: resendEmail })
@@ -458,7 +458,7 @@ function AuthPage({ onLogin }) {
       : { ...formData, phone: getFullPhoneNumber() } // Ajouter le téléphone complet
 
     try {
-      const response = await fetch(`${API_URL}${endpoint}`, {
+      const response = await fetch(`${API_CONFIG}${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
