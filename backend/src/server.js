@@ -1207,8 +1207,8 @@ if (process.env.NODE_ENV !== 'test') {
 
       // URL dynamique selon l'environnement
       const socketUrl = process.env.NODE_ENV === 'production' 
-     ? `wss://${process.env.RENDER_EXTERNAL_URL || 'votre-app.onrender.com'}`
-     : `ws://localhost:${PORT}`;
+      ? `wss://cheapship-back.onrender.com`
+      : `ws://localhost:${PORT}`;
       console.log(`   • Connection URL: ${socketUrl}`);
       }
     
