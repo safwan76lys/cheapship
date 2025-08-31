@@ -3,6 +3,7 @@ const router = express.Router();
 const authMiddleware = require('../middleware/auth');
 const upload = require('../middleware/upload');
 const prisma = require('../config/database');
+const { checkPhoneVerification } = require('../middleware/phoneVerification');
 
 // NOUVEAU : Import du service d'alertes
 let alertService;
@@ -39,8 +40,8 @@ router.use(authMiddleware);
 // CRÉER UNE DEMANDE DE COLIS
 // ================================
 
-router.post('/', trackEvent('create_parcel'), async (req, res) => {
-  try {
+router.post('/', authMiddleware, checkPhoneVerification, async (req, res) => {
+try {
     const {
       name,
       description,
@@ -59,6 +60,8 @@ router.post('/', trackEvent('create_parcel'), async (req, res) => {
       fragile,
       notes
     } = req.body;
+
+        console.log('✅ Création de colis autorisée - téléphone vérifié');
 
     // Validation des données
     if (!name || !category || !weight || !value || !pickupCity || !deliveryCity || !maxPrice) {

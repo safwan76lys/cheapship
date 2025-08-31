@@ -14,6 +14,7 @@ import ParcelsManagement from './components/ParcelsManagement';
 import TripEditForm from './components/TripEditForm';
 import ParcelEditForm from './components/ParcelEditForm';
 import socketService from './services/socketService';
+import SMSTestPage from './pages/SMSTestPage';
 
 // ✅ AJOUT : Import configuration API centralisée
 import { API_CONFIG } from './config/api.js';
@@ -191,6 +192,16 @@ const AppContent = () => {
           } 
         />
 
+        {/* ===== PAGE DE TEST SMS (DÉVELOPPEMENT) ===== */}
+        <Route 
+          path="/test-sms" 
+          element={
+            <PrivateRoute>
+              <SMSTestPage />
+            </PrivateRoute>
+          } 
+        />
+
         {/* Pages privées */}
         <Route 
           path="/dashboard" 
@@ -282,7 +293,7 @@ const AppContent = () => {
             <PrivateRoute>
               <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
-                  <h1 className="text-2xl font-bold text-gray-900 mb-4">Recherche</h1>
+                  <h1 className="text-2xl font-bold text-gray-900 mb-4">🔍 Recherche</h1>
                   <p className="text-gray-600">Page de recherche à développer</p>
                 </div>
               </div>
@@ -296,7 +307,7 @@ const AppContent = () => {
             <PrivateRoute>
               <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
-                  <h1 className="text-2xl font-bold text-gray-900 mb-4">Messages</h1>
+                  <h1 className="text-2xl font-bold text-gray-900 mb-4">💬 Messages</h1>
                   <p className="text-gray-600">Chat temps réel à développer</p>
                 </div>
               </div>
@@ -310,7 +321,7 @@ const AppContent = () => {
             <PrivateRoute>
               <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
-                  <h1 className="text-2xl font-bold text-gray-900 mb-4">Notifications</h1>
+                  <h1 className="text-2xl font-bold text-gray-900 mb-4">🔔 Notifications</h1>
                   <p className="text-gray-600">Centre de notifications à développer</p>
                 </div>
               </div>
@@ -324,7 +335,7 @@ const AppContent = () => {
             <PrivateRoute>
               <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
-                  <h1 className="text-2xl font-bold text-gray-900 mb-4">Paiements</h1>
+                  <h1 className="text-2xl font-bold text-gray-900 mb-4">💳 Paiements</h1>
                   <p className="text-gray-600">Gestion des paiements à développer</p>
                 </div>
               </div>
@@ -338,7 +349,7 @@ const AppContent = () => {
             <PrivateRoute>
               <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
-                  <h1 className="text-2xl font-bold text-gray-900 mb-4">Historique</h1>
+                  <h1 className="text-2xl font-bold text-gray-900 mb-4">📊 Historique</h1>
                   <p className="text-gray-600">Historique des transactions à développer</p>
                 </div>
               </div>
@@ -352,13 +363,13 @@ const AppContent = () => {
           element={
             <div className="min-h-screen flex items-center justify-center">
               <div className="text-center">
-                <h1 className="text-2xl font-bold text-gray-900 mb-4">Centre d'aide</h1>
+                <h1 className="text-2xl font-bold text-gray-900 mb-4">❓ Centre d'aide</h1>
                 <p className="text-gray-600">FAQ et support à développer</p>
                 <button 
                   onClick={() => navigate('/')}
                   className="mt-4 text-blue-600 hover:text-blue-700 font-medium"
                 >
-                  Retour à l'accueil
+                  ← Retour à l'accueil
                 </button>
               </div>
             </div>
@@ -370,13 +381,13 @@ const AppContent = () => {
           element={
             <div className="min-h-screen flex items-center justify-center">
               <div className="text-center">
-                <h1 className="text-2xl font-bold text-gray-900 mb-4">Conditions d'utilisation</h1>
+                <h1 className="text-2xl font-bold text-gray-900 mb-4">📋 Conditions d'utilisation</h1>
                 <p className="text-gray-600">CGU à rédiger</p>
                 <button 
                   onClick={() => navigate('/')}
                   className="mt-4 text-blue-600 hover:text-blue-700 font-medium"
                 >
-                  Retour à l'accueil
+                  ← Retour à l'accueil
                 </button>
               </div>
             </div>
@@ -388,13 +399,13 @@ const AppContent = () => {
           element={
             <div className="min-h-screen flex items-center justify-center">
               <div className="text-center">
-                <h1 className="text-2xl font-bold text-gray-900 mb-4">Politique de confidentialité</h1>
+                <h1 className="text-2xl font-bold text-gray-900 mb-4">🔒 Politique de confidentialité</h1>
                 <p className="text-gray-600">Politique de confidentialité à rédiger</p>
                 <button 
                   onClick={() => navigate('/')}
                   className="mt-4 text-blue-600 hover:text-blue-700 font-medium"
                 >
-                  Retour à l'accueil
+                  ← Retour à l'accueil
                 </button>
               </div>
             </div>
@@ -413,7 +424,7 @@ const AppContent = () => {
 
 // Composant principal App avec Router
 function App() {
-  console.log("App.jsx - Démarrage avec React Router");
+  console.log("🚀 App.jsx - Démarrage avec React Router");
   
   return (
     <Router>

@@ -48,6 +48,9 @@ model User {
   conversationParticipants   ConversationParticipant[]
   favorites                  Favorite[]
   notifications              Notification[]
+  phoneVerificationToken    String?
+  phoneVerificationExpires  DateTime?
+  phoneVerificationAttempts Int       @default(0) // Compteur tentatives
 
   @@index([email])
 }

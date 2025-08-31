@@ -2,7 +2,90 @@ import { useState, useEffect } from 'react'
 import { Mail, Lock, User, Phone, Eye, EyeOff, AlertCircle, CheckCircle, Loader, ArrowLeft } from 'lucide-react'
 import { API_URL } from '../config/api.js'
 import PhonePrefixSelector from './PhonePrefixSelector'
+import SMSVerification from './SMSVerification';
+import { ChevronDown, Search } from 'lucide-react'; 
 
+const COUNTRIES_DATA = [
+  { code: 'FR', name: 'France', flag: '🇫🇷', dialCode: '+33', format: '06 12 34 56 78' },
+  { code: 'EG', name: 'Égypte', flag: '🇪🇬', dialCode: '+20', format: '10 1234 5678' },
+  { code: 'US', name: 'États-Unis', flag: '🇺🇸', dialCode: '+1', format: '(555) 123-4567' },
+  { code: 'GB', name: 'Royaume-Uni', flag: '🇬🇧', dialCode: '+44', format: '07123 456789' },
+  { code: 'DE', name: 'Allemagne', flag: '🇩🇪', dialCode: '+49', format: '0151 12345678' },
+  { code: 'ES', name: 'Espagne', flag: '🇪🇸', dialCode: '+34', format: '612 34 56 78' },
+  { code: 'IT', name: 'Italie', flag: '🇮🇹', dialCode: '+39', format: '312 345 6789' },
+  { code: 'NL', name: 'Pays-Bas', flag: '🇳🇱', dialCode: '+31', format: '06 12345678' },
+  { code: 'BE', name: 'Belgique', flag: '🇧🇪', dialCode: '+32', format: '0470 12 34 56' },
+  { code: 'CH', name: 'Suisse', flag: '🇨🇭', dialCode: '+41', format: '078 123 45 67' },
+  { code: 'CA', name: 'Canada', flag: '🇨🇦', dialCode: '+1', format: '(416) 123-4567' },
+  { code: 'MA', name: 'Maroc', flag: '🇲🇦', dialCode: '+212', format: '0612-345678' },
+  { code: 'TN', name: 'Tunisie', flag: '🇹🇳', dialCode: '+216', format: '20 123 456' },
+  { code: 'DZ', name: 'Algérie', flag: '🇩🇿', dialCode: '+213', format: '0551 23 45 67' }
+];
+// Composant sélecteur pays pour AuthPage
+const CountrySelector = ({ selectedCountry, onSelect, isOpen, onToggle }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  const filteredCountries = COUNTRIES_DATA.filter(country =>
+    country.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    country.dialCode.includes(searchTerm) ||
+    country.code.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex items-center space-x-2 px-3 py-3 border border-gray-300 rounded-l-lg bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[120px]"
+      >
+        <span className="text-lg">{selectedCountry.flag}</span>
+        <span className="text-sm font-medium">{selectedCountry.dialCode}</span>
+        <ChevronDown 
+          size={16} 
+          className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} 
+        />
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-64 overflow-hidden min-w-[280px]">
+          <div className="p-2 border-b border-gray-200">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+              <input
+                type="text"
+                placeholder="Rechercher un pays..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                autoFocus
+              />
+            </div>
+          </div>
+          
+          <div className="max-h-48 overflow-y-auto">
+            {filteredCountries.map((country) => (
+              <button
+                key={country.code}
+                type="button"
+                onClick={() => {
+                  onSelect(country);
+                  setSearchTerm('');
+                }}
+                className="w-full flex items-center px-4 py-2 hover:bg-blue-50 text-left"
+              >
+                <span className="text-lg mr-3">{country.flag}</span>
+                <div className="flex-1">
+                  <div className="font-medium text-gray-900">{country.name}</div>
+                  <div className="text-sm text-gray-500">{country.dialCode}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 function AuthPage({ onLogin }) {
   const [isLogin, setIsLogin] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
@@ -37,6 +120,67 @@ function AuthPage({ onLogin }) {
     prefix: { countryCode: 'FR', prefix: '+33' },
     number: ''
   })
+  // États pour le téléphone international et SMS
+  const [selectedCountry, setSelectedCountry] = useState(
+    COUNTRIES_DATA.find(c => c.code === 'FR') // France par défaut
+  );
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
+  
+  // États pour le workflow SMS
+  const [showSMSVerification, setShowSMSVerification] = useState(false);
+  const [registeredUser, setRegisteredUser] = useState(null);
+  const [registrationStep, setRegistrationStep] = useState('form'); // 'form', 'email', 'phone', 'complete'
+
+  // Fonctions utilitaires pour le téléphone
+  const getFullPhoneNumber = () => {
+    if (!selectedCountry || !phoneNumber) return '';
+    const cleanNumber = phoneNumber.replace(/\D/g, '');
+    return `${selectedCountry.dialCode}${cleanNumber}`;
+  };
+
+  const validatePhoneNumber = () => {
+    const cleanNumber = phoneNumber.replace(/\D/g, '');
+    return cleanNumber.length >= 8 && cleanNumber.length <= 15;
+  };
+
+   // Fonctions du workflow SMS
+  const handleEmailVerified = () => {
+    setRegistrationStep('phone');
+    setShowSMSVerification(true);
+    setSuccess('Email vérifié ! Maintenant, vérifions votre téléphone pour sécuriser votre compte.');
+  };
+
+  const handlePhoneVerificationComplete = (phone) => {
+    setRegistrationStep('complete');
+    setShowSMSVerification(false);
+    
+    const updatedUser = { ...registeredUser, phoneVerified: true, emailVerified: true };
+    onLogin(localStorage.getItem('token'), updatedUser);
+    
+    setSuccess('Compte entièrement configuré ! Bienvenue sur Cheapship 🎉');
+  };
+
+  const skipPhoneVerification = () => {
+    setRegistrationStep('complete');
+    onLogin(localStorage.getItem('token'), registeredUser);
+    setSuccess('Inscription terminée ! Vous pourrez vérifier votre téléphone plus tard dans votre profil.');
+  };
+
+  // Gestion des clics extérieurs pour le dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isCountryDropdownOpen && !event.target.closest('.country-selector')) {
+        setIsCountryDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isCountryDropdownOpen]);
+
 
   // Validation mot de passe renforcée
   const validatePassword = (password) => {
@@ -299,12 +443,19 @@ function AuthPage({ onLogin }) {
         setLoading(false)
         return
       }
+
+      // ✅ NOUVEAU : Validation du téléphone international obligatoire
+      if (!validatePhoneNumber()) {
+        setError('Le numéro de téléphone est obligatoire et doit contenir entre 8 et 15 chiffres');
+        setLoading(false);
+        return;
+      }
     }
 
     const endpoint = isLogin ? '/auth/login' : '/auth/register'
     const body = isLogin 
       ? { email: formData.email, password: formData.password }
-      : formData
+      : { ...formData, phone: getFullPhoneNumber() } // Ajouter le téléphone complet
 
     try {
       const response = await fetch(`${API_URL}${endpoint}`, {
@@ -321,10 +472,14 @@ function AuthPage({ onLogin }) {
         if (isLogin) {
           onLogin(data.token, data.user)
         } else {
+          // ✅ NOUVEAU : Workflow d'inscription avec SMS
+          setRegisteredUser({ ...data.user, phone: getFullPhoneNumber() })
+          setRegistrationStep('email')
           setSuccess('Inscription réussie ! Vérifiez votre email pour activer votre compte.')
-          setIsLogin(true)
-          // Préremplir l'email pour le renvoi
           setResendEmail(formData.email)
+          
+          // Auto-connexion temporaire pour la vérification SMS
+          localStorage.setItem('token', data.token)
         }
       } else {
         setError(data.error || 'Une erreur est survenue')
@@ -618,7 +773,7 @@ function AuthPage({ onLogin }) {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+       <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
             <>
               <div>
@@ -635,33 +790,39 @@ function AuthPage({ onLogin }) {
                 </div>
               </div>
               
-              <div>
+              {/* Nouveau champ téléphone avec sélecteur pays intégré */}
+              <div className="country-selector">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Pays
+                  Numéro de téléphone <span className="text-red-500">*</span>
                 </label>
-                <PhonePrefixSelector
-                  value={phoneData.prefix}
-                  onChange={(prefixData) => setPhoneData(prev => ({
-                    ...prev,
-                    prefix: prefixData
-                  }))}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Numéro de téléphone
-                </label>
-                <input
-                  type="tel"
-                  value={phoneData.number}
-                  onChange={(e) => setPhoneData(prev => ({
-                    ...prev,
-                    number: e.target.value
-                  }))}
-                  placeholder="06 12 34 56 78"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                <div className="flex">
+                  <CountrySelector
+                    selectedCountry={selectedCountry}
+                    onSelect={(country) => {
+                      setSelectedCountry(country);
+                      setIsCountryDropdownOpen(false);
+                    }}
+                    isOpen={isCountryDropdownOpen}
+                    onToggle={() => setIsCountryDropdownOpen(!isCountryDropdownOpen)}
+                  />
+                  <input
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    placeholder="612 345 678"
+                    className="flex-1 px-3 py-3 border border-l-0 border-gray-300 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required={!isLogin}
+                    maxLength={15}
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Saisissez votre numéro sans l'indicatif pays
+                </p>
+                {getFullPhoneNumber() && (
+                  <p className="text-sm text-blue-600 mt-1 font-medium">
+                    Numéro complet : {getFullPhoneNumber()}
+                  </p>
+                )}
               </div>
             </>
           )}
@@ -715,6 +876,24 @@ function AuthPage({ onLogin }) {
             )}
           </div>
 
+          {/* Message informatif pour l'inscription */}
+          {!isLogin && (
+            <div className="bg-blue-50 p-3 rounded-lg mb-4">
+              <div className="flex items-start space-x-2">
+                <Phone className="text-blue-600 mt-0.5" size={16} />
+                <div className="text-xs text-blue-700">
+                  <p className="font-medium mb-1">📞 Numérotation internationale</p>
+                  <ul className="space-y-0.5 text-blue-600">
+                    <li>• Sélectionnez votre pays dans la liste</li>
+                    <li>• Saisissez votre numéro local uniquement</li>
+                    <li>• Vérification SMS automatique après inscription</li>
+                    <li>• Support de 14+ pays populaires</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={loading}
@@ -727,6 +906,62 @@ function AuthPage({ onLogin }) {
             )}
           </button>
         </form>
+
+        {/* ✅ NOUVEAU : Sections après inscription réussie */}
+        {registrationStep === 'email' && (
+          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="text-center mb-4">
+              <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-2" />
+              <h3 className="font-semibold text-blue-900 mb-2">Inscription réussie !</h3>
+              <p className="text-sm text-blue-700">
+                Un email de vérification a été envoyé à <strong>{formData.email}</strong>
+              </p>
+            </div>
+            
+            <div className="space-y-3">
+              <button
+                onClick={handleEmailVerified}
+                className="w-full bg-green-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-green-700"
+              >
+                ✅ J'ai vérifié mon email
+              </button>
+              
+              <button
+                onClick={handleResendVerificationEmail}
+                disabled={isResendingEmail}
+                className="w-full bg-gray-200 text-gray-700 py-2 px-4 rounded-lg font-medium hover:bg-gray-300 disabled:opacity-50"
+              >
+                {isResendingEmail ? 'Envoi en cours...' : '📧 Renvoyer l\'email'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {registrationStep === 'phone' && !showSMSVerification && (
+          <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg text-center">
+            <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-2" />
+            <h3 className="font-semibold text-green-900 mb-2">Email vérifié !</h3>
+            <p className="text-sm text-green-700 mb-4">
+              Dernière étape : vérifions votre téléphone pour sécuriser votre compte
+            </p>
+            
+            <div className="space-y-2">
+              <button
+                onClick={() => setShowSMSVerification(true)}
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700"
+              >
+                📱 Vérifier mon téléphone
+              </button>
+              
+              <button
+                onClick={skipPhoneVerification}
+                className="w-full text-gray-600 py-1 text-sm hover:text-gray-800"
+              >
+                Ignorer pour l'instant
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Section : Aide pour les utilisateurs perdus */}
         {isLogin && (
@@ -807,6 +1042,15 @@ function AuthPage({ onLogin }) {
             )}
           </div>
         )}
+
+        {/* Modal de vérification SMS après inscription */}
+        <SMSVerification
+          user={registeredUser}
+          isOpen={showSMSVerification}
+          onClose={() => setShowSMSVerification(false)}
+          onVerificationComplete={handlePhoneVerificationComplete}
+          mode="registration"
+        />
       </div>
     </div>
   )

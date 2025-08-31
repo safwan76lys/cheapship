@@ -64,10 +64,47 @@ const resendVerificationLimiter = rateLimit({
   skipSuccessfulRequests: false // Compte toutes les tentatives
 });
 
+// ================================
+// LIMITEURS SMS (à ajouter)
+// ================================
+
+const smsLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 heure
+  max: 3, // 3 SMS par heure max
+  message: {
+    error: 'Trop de demandes SMS',
+    message: 'Vous avez envoyé trop de demandes SMS. Réessayez dans 1 heure.',
+    retryAfter: 3600
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    return `sms_${req.user?.id || req.ip}`;
+  }
+});
+
+const smsVerifyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 tentatives de vérification par 15 min
+  message: {
+    error: 'Trop de tentatives de vérification',
+    message: 'Trop de tentatives de vérification du code SMS. Réessayez dans 15 minutes.',
+    retryAfter: 900
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    return `sms_verify_${req.user?.id || req.ip}`;
+  }
+}); // ✅ Accolade fermée ici
+
+// ✅ Export unique et complet
 module.exports = {
   apiLimiter,
   authLimiter,
   messageLimiter,
   uploadLimiter,
-  resendVerificationLimiter // ✅ AJOUT
+  resendVerificationLimiter,
+  smsLimiter,
+  smsVerifyLimiter
 };

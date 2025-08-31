@@ -1,59 +1,85 @@
-import { useState, useEffect } from 'react'
-import { 
-  Package, MapPin, MessageCircle, LogOut, Star, User, Plus, Compass, Search, Bell, BarChart3,
-  TrendingUp, TrendingDown, DollarSign, Clock, Target, Award, AlertCircle,
-  Calendar, ArrowUp, ArrowDown, Activity, Zap, PieChart
-} from 'lucide-react'
-import Reviews from './Reviews'
-import UserProfile from './UserProfile'
-import TravelForm from './TravelForm'
-import ParcelForm from './ParcelForm'
-import TripsManagement from './TripsManagement'
-import ParcelsManagement from './ParcelsManagement'
-import MessagingSystem from './MessagingSystem'
-import GeographicSearch from './GeographicSearch'
-import AlertsManagement from './AlertsManagement'
+import { useState, useEffect } from 'react';
+import {
+  Package,
+  MapPin,
+  MessageCircle,
+  LogOut,
+  Star,
+  User,
+  Plus,
+  Compass,
+  Search,
+  Bell,
+  BarChart3,
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Clock,
+  Target,
+  Award,
+  AlertCircle,
+  Calendar,
+  ArrowUp,
+  ArrowDown,
+  Activity,
+  Zap,
+  PieChart,
+  Phone,
+  Plane,
+  Shield,
+  CheckCircle
+} from 'lucide-react';
+import { PhoneVerificationBadge, PhoneVerificationGuard } from './SMSVerification';
+import SMSVerification from './SMSVerification';
+import Reviews from './Reviews';
+import UserProfile from './UserProfile';
+import TravelForm from './TravelForm';
+import ParcelForm from './ParcelForm';
+import TripsManagement from './TripsManagement';
+import ParcelsManagement from './ParcelsManagement';
+import MessagingSystem from './MessagingSystem';
+import GeographicSearch from './GeographicSearch';
+import AlertsManagement from './AlertsManagement';
 
-const API_URL = 'https://cheapship-back.onrender.com/api'
-
+const API_URL = 'https://cheapship-back.onrender.com/api';
 
 // Composant Analytics
 function AnalyticsDashboard({ user }) {
-  const [analytics, setAnalytics] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [selectedPeriod, setSelectedPeriod] = useState('30d')
+  const [analytics, setAnalytics] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedPeriod, setSelectedPeriod] = useState('30d');
 
   useEffect(() => {
-    fetchAnalytics()
-  }, [selectedPeriod])
+    fetchAnalytics();
+  }, [selectedPeriod]);
 
   const fetchAnalytics = async () => {
     try {
-      setLoading(true)
-      setError(null)
-      
-      const token = localStorage.getItem('token')
+      setLoading(true);
+      setError(null);
+
+      const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/analytics/dashboard?period=${selectedPeriod}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
-      })
+      });
 
       if (!response.ok) {
-        throw new Error('Erreur lors du chargement des analytics')
+        throw new Error('Erreur lors du chargement des analytics');
       }
 
-      const data = await response.json()
-      setAnalytics(data.analytics)
+      const data = await response.json();
+      setAnalytics(data.analytics);
     } catch (error) {
-      console.error('Erreur analytics:', error)
-      setError(error.message)
+      console.error('Erreur analytics:', error);
+      setError(error.message);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -63,7 +89,7 @@ function AnalyticsDashboard({ user }) {
           <p className="mt-4 text-gray-600">Chargement de vos analytics...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -81,7 +107,7 @@ function AnalyticsDashboard({ user }) {
           Réessayer
         </button>
       </div>
-    )
+    );
   }
 
   if (!analytics) {
@@ -93,10 +119,10 @@ function AnalyticsDashboard({ user }) {
         </div>
         <p className="mt-2 text-yellow-700">Aucune donnée analytics trouvée.</p>
       </div>
-    )
+    );
   }
 
-  const { basic, earnings, performance, trust, predictions, insights } = analytics
+  const { basic, earnings, performance, trust, predictions, insights } = analytics;
 
   return (
     <div className="space-y-6">
@@ -106,7 +132,7 @@ function AnalyticsDashboard({ user }) {
           <h1 className="text-2xl font-bold text-gray-900">📊 Analytics Dashboard</h1>
           <p className="text-gray-600">Votre performance sur Cheapship</p>
         </div>
-        
+
         <select
           value={selectedPeriod}
           onChange={(e) => setSelectedPeriod(e.target.value)}
@@ -193,20 +219,20 @@ function AnalyticsDashboard({ user }) {
             <Zap className="h-6 w-6 mr-2" />
             🤖 Prédictions IA
           </h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-white bg-opacity-20 rounded-lg p-4">
               <h3 className="font-semibold">Revenus prochains</h3>
               <p className="text-2xl font-bold">{predictions.nextMonthEarnings}€</p>
               <p className="text-sm opacity-80">Mois prochain</p>
             </div>
-            
+
             <div className="bg-white bg-opacity-20 rounded-lg p-4">
               <h3 className="font-semibold">Croissance demande</h3>
               <p className="text-2xl font-bold">+{predictions.demandGrowth}%</p>
               <p className="text-sm opacity-80">Tendance marché</p>
             </div>
-            
+
             <div className="bg-white bg-opacity-20 rounded-lg p-4">
               <h3 className="font-semibold">Confiance IA</h3>
               <p className="text-2xl font-bold">{predictions.confidence}%</p>
@@ -222,23 +248,23 @@ function AnalyticsDashboard({ user }) {
           <Activity className="h-5 w-5 mr-2 text-gray-600" />
           Performance détaillée
         </h2>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="text-center p-4 bg-gray-50 rounded-lg">
             <p className="text-2xl font-bold text-blue-600">{performance?.reliability || 0}</p>
             <p className="text-sm text-gray-600">Score fiabilité</p>
           </div>
-          
+
           <div className="text-center p-4 bg-gray-50 rounded-lg">
             <p className="text-2xl font-bold text-green-600">{performance?.efficiency || 0}</p>
             <p className="text-sm text-gray-600">Score efficacité</p>
           </div>
-          
+
           <div className="text-center p-4 bg-gray-50 rounded-lg">
             <p className="text-2xl font-bold text-red-600">{performance?.cancelationRate || 0}%</p>
             <p className="text-sm text-gray-600">Taux annulation</p>
           </div>
-          
+
           <div className="text-center p-4 bg-gray-50 rounded-lg">
             <p className="text-2xl font-bold text-purple-600">{performance?.onTimeDeliveryRate || 0}%</p>
             <p className="text-sm text-gray-600">Livraisons à temps</p>
@@ -246,37 +272,81 @@ function AnalyticsDashboard({ user }) {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 function Dashboard({ user, onLogout }) {
-  const [currentView, setCurrentView] = useState('dashboard')
+  const [currentView, setCurrentView] = useState('dashboard');
+
+  // États pour la vérification SMS
+  const [showSMSVerification, setShowSMSVerification] = useState(false);
+
+  // Fonction callback pour la vérification SMS complétée
+  const handlePhoneVerificationComplete = (phone) => {
+    // Mettre à jour les données utilisateur localement
+    const updatedUser = { ...user, phone, phoneVerified: true };
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    setShowSMSVerification(false);
+
+    // Recharger la page pour mettre à jour l'état global
+    window.location.reload();
+  };
 
   const renderCurrentView = () => {
-    switch(currentView) {
+    // Alerte de vérification téléphone (à afficher sur le dashboard principal seulement)
+    const phoneAlert = currentView === 'dashboard' && !user?.phoneVerified && (
+      <div className="bg-orange-50 border-l-4 border-orange-400 p-4 mb-6 rounded-r-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <Phone className="h-5 w-5 text-orange-400" />
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-orange-800">
+                Vérification du téléphone requise
+              </h3>
+              <p className="text-sm text-orange-700 mt-1">
+                Pour votre sécurité et celle des autres utilisateurs, vérifiez votre numéro de téléphone pour accéder à toutes les fonctionnalités.
+              </p>
+            </div>
+          </div>
+          <div className="ml-auto pl-3">
+            <button
+              onClick={() => setShowSMSVerification(true)}
+              className="bg-orange-100 text-orange-800 px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-200 transition-colors"
+            >
+              Vérifier maintenant
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+
+    switch (currentView) {
       case 'analytics':
-        return <AnalyticsDashboard user={user} />
+        return <AnalyticsDashboard user={user} />;
       case 'reviews':
-        return <Reviews userId={user?.id} />
+        return <Reviews userId={user?.id} />;
       case 'profile':
-        return <UserProfile />
+        return <UserProfile />;
       case 'myTrips':
-        return <TripsManagement onCreateTrip={() => setCurrentView('createTrip')} />
+        return <TripsManagement onCreateTrip={() => setCurrentView('createTrip')} />;
       case 'createTrip':
-        return <TravelForm />
+        return <TravelForm />;
       case 'myParcels':
-        return <ParcelsManagement onCreateParcel={() => setCurrentView('createParcel')} /> 
+        return <ParcelsManagement onCreateParcel={() => setCurrentView('createParcel')} />;
       case 'createParcel':
-        return <ParcelForm /> 
+        return <ParcelForm />;
       case 'messages':
-        return <MessagingSystem user={user} onClose={() => setCurrentView('dashboard')} />
+        return <MessagingSystem user={user} onClose={() => setCurrentView('dashboard')} />;
       case 'search':
-        return <GeographicSearch user={user} onClose={() => setCurrentView('dashboard')} />
+        return <GeographicSearch user={user} onClose={() => setCurrentView('dashboard')} />;
       case 'alerts':
-        return <AlertsManagement user={user} />
+        return <AlertsManagement user={user} />;
       default:
         return (
           <>
+            {phoneAlert}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
               {/* MES COLIS - Cliquable */}
               <button
@@ -289,7 +359,7 @@ function Dashboard({ user, onLogout }) {
                 </div>
                 <p className="text-gray-600">Gérez vos demandes de transport</p>
               </button>
-               
+
               {/* MES VOYAGES - Cliquable */}
               <button
                 onClick={() => setCurrentView('myTrips')}
@@ -397,7 +467,7 @@ function Dashboard({ user, onLogout }) {
                 <User className="h-5 w-5 mr-2 text-blue-600" />
                 📊 Vos données utilisateur
               </h3>
-              
+
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center bg-white p-4 rounded-lg">
                   <p className="text-2xl font-bold text-blue-600">
@@ -405,21 +475,21 @@ function Dashboard({ user, onLogout }) {
                   </p>
                   <p className="text-sm text-gray-600">Note moyenne</p>
                 </div>
-                
+
                 <div className="text-center bg-white p-4 rounded-lg">
                   <p className="text-2xl font-bold text-green-600">
                     {user?.totalRatings || 0}
                   </p>
                   <p className="text-sm text-gray-600">Total avis</p>
                 </div>
-                
+
                 <div className="text-center bg-white p-4 rounded-lg">
                   <p className="text-2xl font-bold text-purple-600">
                     {user?.identityVerified ? '✅' : '⏳'}
                   </p>
                   <p className="text-sm text-gray-600">Vérification</p>
                 </div>
-                
+
                 <div className="text-center bg-white p-4 rounded-lg">
                   <p className="text-2xl font-bold text-orange-600">
                     {user?.emailVerified ? '✅' : '⏳'}
@@ -437,7 +507,7 @@ function Dashboard({ user, onLogout }) {
                     Membre depuis: {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Non défini'}
                   </p>
                 </div>
-                
+
                 <div className="bg-white p-4 rounded-lg">
                   <h4 className="font-semibold text-gray-700 mb-2">Statut du compte</h4>
                   <p className="text-sm text-gray-600">
@@ -453,9 +523,9 @@ function Dashboard({ user, onLogout }) {
               </div>
             </div>
           </>
-        )
+        );
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -464,7 +534,7 @@ function Dashboard({ user, onLogout }) {
           <h1 className="text-2xl font-bold text-blue-600">Cheapship</h1>
           <div className="flex items-center gap-4">
             <span className="text-gray-700">Bonjour, {user?.fullName}</span>
-            
+
             {/* Indicateur Analytics */}
             {currentView !== 'analytics' && (
               <button
@@ -474,7 +544,7 @@ function Dashboard({ user, onLogout }) {
                 📊 Analytics
               </button>
             )}
-            
+
             <button
               onClick={onLogout}
               className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded"
@@ -495,11 +565,20 @@ function Dashboard({ user, onLogout }) {
             ← Retour au tableau de bord
           </button>
         )}
-        
+
         {renderCurrentView()}
       </main>
+
+      {/* Modal de vérification SMS */}
+      <SMSVerification
+        user={user}
+        isOpen={showSMSVerification}
+        onClose={() => setShowSMSVerification(false)}
+        onVerificationComplete={handlePhoneVerificationComplete}
+        mode="required"
+      />
     </div>
-  )
+  );
 }
 
-export default Dashboard
+export default Dashboard;

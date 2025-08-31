@@ -4,12 +4,13 @@ const authMiddleware = require('../middleware/auth');
 const prisma = require('../config/database');
 const alertService = require('../services/alertService'); // NOUVEAU
 const { trackEvent } = require('../middleware/analytics');
+const { checkPhoneVerification } = require('../middleware/phoneVerification');
 
 // Toutes les routes nécessitent l'authentification
 router.use(authMiddleware);
 
 // Créer un voyage
-router.post('/', trackEvent('create_trip') ,async (req, res) => {
+router.post('/', checkPhoneVerification, async (req, res) => { // ✅ CORRECTION: Enlever le double authMiddleware
   try {
     const {
       departureCity,
@@ -22,6 +23,8 @@ router.post('/', trackEvent('create_trip') ,async (req, res) => {
       pricePerKg,
       description
     } = req.body;
+
+    console.log('✅ Création de voyage autorisée - téléphone vérifié'); // ✅ CORRECTION: Déplacer le log avant la création
 
     const trip = await prisma.trip.create({
       data: {
@@ -64,61 +67,14 @@ router.post('/', trackEvent('create_trip') ,async (req, res) => {
       message: 'Voyage créé avec succès',
       trip
     });
-
   } catch (error) {
     console.error('Error creating trip:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Erreur lors de la création du voyage',
-      details: error.message 
+      details: error.message
     });
   }
 });
-
-// Récupérer les voyages de l'utilisateur
-router.get('/my-trips', trackEvent('view_trips') , async (req, res) => {
-  try {
-    const trips = await prisma.trip.findMany({
-      where: { 
-        userId: req.user.id 
-      },
-      orderBy: { 
-        createdAt: 'desc' 
-      },
-      select: {
-        id: true,
-        departureCity: true,
-        departureCountry: true,
-        arrivalCity: true,
-        arrivalCountry: true,
-        departureDate: true,
-        arrivalDate: true,
-        availableWeight: true,
-        pricePerKg: true,
-        description: true,
-        status: true,
-        createdAt: true,
-        _count: {
-          select: {
-            items: true // Nombre de colis associés
-          }
-        }
-      }
-    });
-
-    res.json({
-      success: true,
-      trips,
-      total: trips.length
-    });
-
-  } catch (error) {
-    console.error('❌ Error fetching user trips:', error);
-    res.status(500).json({ 
-      error: 'Erreur lors de la récupération des voyages' 
-    });
-  }
-});
-
 // Supprimer un voyage
 router.delete('/:id', async (req, res) => {
   try {

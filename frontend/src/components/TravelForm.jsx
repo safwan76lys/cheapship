@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef } from 'react'
-import { 
-  Plane, 
-  MapPin, 
-  Calendar, 
-  Clock, 
-  Euro, 
-  Weight, 
+import { useState, useEffect, useRef } from 'react';
+import {
+  Plane,
+  MapPin,
+  Calendar,
+  Clock,
+  Euro,
+  Weight,
   Users,
   ArrowRight,
   Search,
@@ -15,16 +15,40 @@ import {
   Info,
   Plus,
   X
-} from 'lucide-react'
+} from 'lucide-react';
+import SMSVerification, { PhoneVerificationGuard } from './SMSVerification';
 
-const API_URL = 'https://cheapship-back.onrender.com/api'
+// ✅ CORRECTION : URL sans espaces
+const API_URL = 'https://cheapship-back.onrender.com/api';
 
 function TravelForm() {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
-  const [currentStep, setCurrentStep] = useState(1)
-  
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [currentStep, setCurrentStep] = useState(1);
+
+  // États pour la vérification SMS
+  const [showSMSVerification, setShowSMSVerification] = useState(false);
+  const [user, setUser] = useState(null);
+
+  // Charger les données utilisateur
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+  }, []);
+
+  // Fonction callback pour la vérification SMS complétée
+  const handlePhoneVerificationComplete = (phone) => {
+    setShowSMSVerification(false);
+    // Mettre à jour l'état utilisateur
+    const updatedUser = { ...user, phone, phoneVerified: true };
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    setSuccess('Téléphone vérifié ! Vous pouvez maintenant proposer des voyages.');
+  };
+
   // États pour l'autocomplétion des villes (version intégrée)
   const [departureCities, setDepartureCities] = useState([]);
   const [arrivalCities, setArrivalCities] = useState([]);
@@ -32,14 +56,14 @@ function TravelForm() {
   const [showArrivalResults, setShowArrivalResults] = useState(false);
   const [loadingDeparture, setLoadingDeparture] = useState(false);
   const [loadingArrival, setLoadingArrival] = useState(false);
-  
+
   const departureTimeout = useRef(null);
   const arrivalTimeout = useRef(null);
   const departureInputRef = useRef(null);
   const arrivalInputRef = useRef(null);
   const departureResultsRef = useRef(null);
   const arrivalResultsRef = useRef(null);
-  
+
   const [formData, setFormData] = useState({
     departureCity: '',
     departureCountry: 'France',
@@ -60,7 +84,7 @@ function TravelForm() {
     arrivalLatitude: null,
     arrivalLongitude: null,
     arrivalGeonameId: null
-  })
+  });
 
   // Fonction de recherche de villes avec API GeoNames
   const searchCities = async (query, setResults, setLoading, setShowResults) => {
@@ -72,17 +96,17 @@ function TravelForm() {
 
     setLoading(true);
     console.log('🔍 Searching cities for:', query); // Debug
-    
+
     try {
       const url = `${API_URL}/cities/search?q=${encodeURIComponent(query)}&limit=8`;
       console.log('📡 API Call:', url); // Debug
-      
+
       const response = await fetch(url);
       console.log('📥 Response status:', response.status); // Debug
-      
+
       const data = await response.json();
       console.log('📄 Response data:', data); // Debug
-      
+
       if (data.success && data.cities) {
         const formattedCities = data.cities.map(city => ({
           id: city.id,
@@ -115,12 +139,12 @@ function TravelForm() {
 
   // Gestionnaire pour ville de départ
   const handleDepartureSearch = (value) => {
-    setFormData({...formData, departureCity: value});
-    
+    setFormData({ ...formData, departureCity: value });
+
     if (departureTimeout.current) {
       clearTimeout(departureTimeout.current);
     }
-    
+
     departureTimeout.current = setTimeout(() => {
       searchCities(value, setDepartureCities, setLoadingDeparture, setShowDepartureResults);
     }, 300);
@@ -128,12 +152,12 @@ function TravelForm() {
 
   // Gestionnaire pour ville d'arrivée
   const handleArrivalSearch = (value) => {
-    setFormData({...formData, arrivalCity: value});
-    
+    setFormData({ ...formData, arrivalCity: value });
+
     if (arrivalTimeout.current) {
       clearTimeout(arrivalTimeout.current);
     }
-    
+
     arrivalTimeout.current = setTimeout(() => {
       searchCities(value, setArrivalCities, setLoadingArrival, setShowArrivalResults);
     }, 300);
@@ -205,16 +229,16 @@ function TravelForm() {
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
-        departureResultsRef.current && 
+        departureResultsRef.current &&
         !departureResultsRef.current.contains(event.target) &&
         departureInputRef.current &&
         !departureInputRef.current.contains(event.target)
       ) {
         setShowDepartureResults(false);
       }
-      
+
       if (
-        arrivalResultsRef.current && 
+        arrivalResultsRef.current &&
         !arrivalResultsRef.current.contains(event.target) &&
         arrivalInputRef.current &&
         !arrivalInputRef.current.contains(event.target)
@@ -243,42 +267,42 @@ function TravelForm() {
 
   // Validation étape par étape
   const validateStep = (step) => {
-    switch(step) {
+    switch (step) {
       case 1:
-        return formData.departureCity && formData.arrivalCity && 
-               formData.departureCity !== formData.arrivalCity
+        return formData.departureCity && formData.arrivalCity &&
+               formData.departureCity !== formData.arrivalCity;
       case 2:
         return formData.departureDate && formData.departureTime &&
-               formData.arrivalDate && formData.arrivalTime
+               formData.arrivalDate && formData.arrivalTime;
       case 3:
         return formData.availableWeight && formData.pricePerKg &&
-               parseFloat(formData.availableWeight) > 0 && parseFloat(formData.pricePerKg) > 0
+               parseFloat(formData.availableWeight) > 0 && parseFloat(formData.pricePerKg) > 0;
       default:
-        return true
+        return true;
     }
-  }
+  };
 
   // Navigation entre étapes
   const nextStep = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(prev + 1, 4))
-      setError('')
+      setCurrentStep(prev => Math.min(prev + 1, 4));
+      setError('');
     } else {
-      setError('Veuillez remplir tous les champs obligatoires')
+      setError('Veuillez remplir tous les champs obligatoires');
     }
-  }
+  };
 
   const prevStep = () => {
-    setCurrentStep(prev => Math.max(prev - 1, 1))
-    setError('')
-  }
+    setCurrentStep(prev => Math.max(prev - 1, 1));
+    setError('');
+  };
 
   // Calculs automatiques
   const calculateEstimatedEarnings = () => {
-    const weight = parseFloat(formData.availableWeight) || 0
-    const price = parseFloat(formData.pricePerKg) || 0
-    return (weight * price).toFixed(2)
-  }
+    const weight = parseFloat(formData.availableWeight) || 0;
+    const price = parseFloat(formData.pricePerKg) || 0;
+    return (weight * price).toFixed(2);
+  };
 
   const calculateDistance = () => {
     // Si on a les coordonnées GPS, on peut calculer la vraie distance
@@ -300,23 +324,23 @@ function TravelForm() {
       'Lyon-Nice': 470,
       'Paris-London': 460,
       'Paris-Berlin': 1050
-    }
-    
-    const key1 = `${formData.departureCity}-${formData.arrivalCity}`
-    const key2 = `${formData.arrivalCity}-${formData.departureCity}`
-    
-    return distances[key1] || distances[key2] || Math.floor(Math.random() * 800 + 200)
-  }
+    };
+
+    const key1 = `${formData.departureCity}-${formData.arrivalCity}`;
+    const key2 = `${formData.arrivalCity}-${formData.departureCity}`;
+
+    return distances[key1] || distances[key2] || Math.floor(Math.random() * 800 + 200);
+  };
 
   // Soumission du formulaire
   const handleSubmit = async () => {
     if (!validateStep(3)) {
-      setError('Veuillez vérifier tous les champs')
-      return
+      setError('Veuillez vérifier tous les champs');
+      return;
     }
 
-    setLoading(true)
-    setError('')
+    setLoading(true);
+    setError('');
 
     try {
       const response = await fetch(`${API_URL}/trips`, {
@@ -344,10 +368,10 @@ function TravelForm() {
           arrivalGeonameId: formData.arrivalGeonameId,
           distanceKm: calculateDistance()
         })
-      })
+      });
 
       if (response.ok) {
-        setSuccess('Voyage publié avec succès!')
+        setSuccess('Voyage publié avec succès!');
         // Reset form
         setFormData({
           departureCity: '',
@@ -368,18 +392,26 @@ function TravelForm() {
           arrivalLatitude: null,
           arrivalLongitude: null,
           arrivalGeonameId: null
-        })
-        setCurrentStep(1)
+        });
+        setCurrentStep(1);
       } else {
-        const data = await response.json()
-        setError(data.error || 'Erreur lors de la publication')
+        const data = await response.json();
+
+        // Gestion de l'erreur de vérification téléphone
+        if (data.requiresPhoneVerification || data.code === 'PHONE_VERIFICATION_REQUIRED') {
+          setShowSMSVerification(true);
+          setError('Vérification du téléphone requise pour continuer');
+          return;
+        }
+
+        setError(data.error || 'Erreur lors de la publication');
       }
     } catch (error) {
-      setError('Erreur de connexion')
+      setError('Erreur de connexion');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // Composant Progress Bar
   const ProgressBar = () => (
@@ -387,10 +419,10 @@ function TravelForm() {
       {[1, 2, 3, 4].map((step) => (
         <div key={step} className="flex items-center">
           <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all duration-300 ${
-            step < currentStep 
-              ? 'bg-green-500 text-white' 
-              : step === currentStep 
-              ? 'bg-blue-600 text-white' 
+            step < currentStep
+              ? 'bg-green-500 text-white'
+              : step === currentStep
+              ? 'bg-blue-600 text-white'
               : 'bg-gray-200 text-gray-500'
           }`}>
             {step < currentStep ? <Check size={20} /> : step}
@@ -403,7 +435,7 @@ function TravelForm() {
         </div>
       ))}
     </div>
-  )
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
@@ -856,45 +888,59 @@ function TravelForm() {
                 <ArrowRight size={20} />
               </button>
             ) : (
-              <button
-                onClick={handleSubmit}
-                disabled={loading}
-                className="px-8 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center gap-2"
+              <PhoneVerificationGuard
+                isVerified={user?.phoneVerified}
+                onVerificationRequired={() => setShowSMSVerification(true)}
               >
-                {loading ? (
-                  <>
-                    <Loader className="animate-spin" size={20} />
-                    Publication...
-                  </>
-                ) : (
-                  <>
-                    <Plus size={20} />
-                    Publier le voyage
-                  </>
-                )}
-              </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  className="px-8 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center gap-2"
+                >
+                  {loading ? (
+                    <>
+                      <Loader className="animate-spin" size={20} />
+                      Publication...
+                    </>
+                  ) : (
+                    <>
+                      <Plus size={20} />
+                      Publier le voyage
+                    </>
+                  )}
+                </button>
+              </PhoneVerificationGuard>
             )}
           </div>
-        </div>
 
-        {/* Informations utiles */}
-        <div className="mt-8 bg-blue-50 rounded-xl p-6 border border-blue-200">
-          <div className="flex items-start gap-3">
-            <Info className="text-blue-600 mt-1" size={20} />
-            <div>
-              <h3 className="font-semibold text-blue-900 mb-2">Conseils pour optimiser votre voyage</h3>
-              <ul className="text-blue-800 space-y-1 text-sm">
-                <li>• Proposez un prix compétitif pour attirer plus de demandes</li>
-                <li>• Soyez précis sur les conditions de transport dans votre description</li>
-                <li>• Vérifiez vos disponibilités avant de publier</li>
-                <li>• Communiquez clairement les points de rendez-vous</li>
-              </ul>
+          {/* Informations utiles */}
+          <div className="mt-8 bg-blue-50 rounded-xl p-6 border border-blue-200">
+            <div className="flex items-start gap-3">
+              <Info className="text-blue-600 mt-1" size={20} />
+              <div>
+                <h3 className="font-semibold text-blue-900 mb-2">Conseils pour optimiser votre voyage</h3>
+                <ul className="text-blue-800 space-y-1 text-sm">
+                  <li>• Proposez un prix compétitif pour attirer plus de demandes</li>
+                  <li>• Soyez précis sur les conditions de transport dans votre description</li>
+                  <li>• Vérifiez vos disponibilités avant de publier</li>
+                  <li>• Communiquez clairement les points de rendez-vous</li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>
+
+        {/* Modal de vérification SMS */}
+        <SMSVerification
+          user={user}
+          isOpen={showSMSVerification}
+          onClose={() => setShowSMSVerification(false)}
+          onVerificationComplete={handlePhoneVerificationComplete}
+          mode="required"
+        />
       </div>
     </div>
-  )
+  );
 }
 
-export default TravelForm
+export default TravelForm;

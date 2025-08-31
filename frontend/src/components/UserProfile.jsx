@@ -1,13 +1,13 @@
-import { useState, useEffect, useRef } from 'react'
-import { 
-  User, 
-  Camera, 
-  Upload, 
-  Star, 
-  Shield, 
-  MapPin, 
-  Phone, 
-  Mail, 
+import { useState, useEffect, useRef } from 'react';
+import {
+  User,
+  Camera,
+  Upload,
+  Star,
+  Shield,
+  MapPin,
+  Phone,
+  Mail,
   Calendar,
   Edit,
   Save,
@@ -20,34 +20,36 @@ import {
   Send,
   RefreshCw,
   Clock
-} from 'lucide-react'
+} from 'lucide-react';
+import SMSVerification, { PhoneVerificationBadge } from './SMSVerification';
 
-// ✅ CORRECTION : Utiliser le bon port du backend (4000)
-const API_URL = 'https://cheapship-back.onrender.com/api'
+// ✅ CORRECTION : URL sans espaces
+const API_URL = 'https://cheapship-back.onrender.com/api';
 
 function UserProfile() {
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [editing, setEditing] = useState(false)
-  const [uploadingPhoto, setUploadingPhoto] = useState(false)
-  const [uploadingDocument, setUploadingDocument] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
-  
-  // ✅ AJOUT : États pour la vérification email
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadingDocument, setUploadingDocument] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [showSMSVerification, setShowSMSVerification] = useState(false);
+
+  // ✅ États pour la vérification email
   const [emailStatus, setEmailStatus] = useState({
     emailVerified: false,
     email: ''
-  })
-  const [isResendingEmail, setIsResendingEmail] = useState(false)
-  const [emailMessage, setEmailMessage] = useState('')
-  const [emailMessageType, setEmailMessageType] = useState('')
-  const [lastEmailSent, setLastEmailSent] = useState(null)
-  const [canResendEmail, setCanResendEmail] = useState(true)
-  
-  const photoInputRef = useRef(null)
-  const documentInputRef = useRef(null)
-  
+  });
+  const [isResendingEmail, setIsResendingEmail] = useState(false);
+  const [emailMessage, setEmailMessage] = useState('');
+  const [emailMessageType, setEmailMessageType] = useState('');
+  const [lastEmailSent, setLastEmailSent] = useState(null);
+  const [canResendEmail, setCanResendEmail] = useState(true);
+
+  const photoInputRef = useRef(null);
+  const documentInputRef = useRef(null);
+
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
@@ -56,12 +58,12 @@ function UserProfile() {
     city: '',
     postalCode: '',
     country: 'France'
-  })
+  });
 
   useEffect(() => {
-    fetchUserProfile()
-    loadEmailStatus()
-  }, [])
+    fetchUserProfile();
+    loadEmailStatus();
+  }, []);
 
   const fetchUserProfile = async () => {
     try {
@@ -69,15 +71,15 @@ function UserProfile() {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
-      })
-      
+      });
+
       if (response.ok) {
-        const userData = await response.json()
-        setUser(userData)
+        const userData = await response.json();
+        setUser(userData);
         setEmailStatus({
           emailVerified: userData.emailVerified || false,
           email: userData.email || ''
-        })
+        });
         setFormData({
           fullName: userData.fullName || '',
           phone: userData.phone || '',
@@ -86,38 +88,38 @@ function UserProfile() {
           city: userData.city || '',
           postalCode: userData.postalCode || '',
           country: userData.country || 'France'
-        })
+        });
       }
     } catch (error) {
-      setError('Erreur lors du chargement du profil')
+      setError('Erreur lors du chargement du profil');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  // ✅ AJOUT : Charger le statut email
+  // ✅ Charger le statut email
   const loadEmailStatus = async () => {
     try {
       const response = await fetch(`${API_URL}/auth/email-status`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
-      })
+      });
 
       if (response.ok) {
-        const data = await response.json()
-        setEmailStatus(data)
+        const data = await response.json();
+        setEmailStatus(data);
       }
     } catch (error) {
-      console.error('Erreur chargement statut email:', error)
+      console.error('Erreur chargement statut email:', error);
     }
-  }
+  };
 
-  // ✅ AJOUT : Renvoyer email de vérification
+  // ✅ Renvoyer email de vérification
   const handleResendVerification = async () => {
-    setIsResendingEmail(true)
-    setEmailMessage('')
-    setCanResendEmail(false)
+    setIsResendingEmail(true);
+    setEmailMessage('');
+    setCanResendEmail(false);
 
     try {
       const response = await fetch(`${API_URL}/auth/resend-verification`, {
@@ -126,49 +128,47 @@ function UserProfile() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (response.ok) {
-        setEmailMessage('Email de vérification envoyé avec succès ! Vérifiez votre boîte mail.')
-        setEmailMessageType('success')
-        setLastEmailSent(new Date())
-        
-        // Délai de 60 secondes avant de pouvoir renvoyer
-        setTimeout(() => setCanResendEmail(true), 60000)
-        
+        setEmailMessage('Email de vérification envoyé avec succès ! Vérifiez votre boîte mail.');
+        setEmailMessageType('success');
+        setLastEmailSent(new Date());
+
+        setTimeout(() => setCanResendEmail(true), 60000);
       } else {
-        setEmailMessage(data.error || 'Erreur lors de l\'envoi de l\'email')
-        setEmailMessageType('error')
-        setCanResendEmail(true)
+        setEmailMessage(data.error || 'Erreur lors de l\'envoi de l\'email');
+        setEmailMessageType('error');
+        setCanResendEmail(true);
       }
     } catch (error) {
-      setEmailMessage('Erreur de connexion au serveur')
-      setEmailMessageType('error')
-      setCanResendEmail(true)
+      setEmailMessage('Erreur de connexion au serveur');
+      setEmailMessageType('error');
+      setCanResendEmail(true);
     } finally {
-      setIsResendingEmail(false)
+      setIsResendingEmail(false);
     }
-  }
+  };
 
-  // ✅ AJOUT : Calculer le temps depuis le dernier envoi
+  // ✅ Calculer le temps depuis le dernier envoi
   const getTimeSinceEmailSent = () => {
-    if (!lastEmailSent) return null
-    
-    const seconds = Math.floor((Date.now() - lastEmailSent.getTime()) / 1000)
-    if (seconds < 60) return `Envoyé il y a ${seconds}s`
-    
-    const minutes = Math.floor(seconds / 60)
-    if (minutes < 60) return `Envoyé il y a ${minutes}min`
-    
-    return `Envoyé il y a ${Math.floor(minutes / 60)}h`
-  }
+    if (!lastEmailSent) return null;
+
+    const seconds = Math.floor((Date.now() - lastEmailSent.getTime()) / 1000);
+    if (seconds < 60) return `Envoyé il y a ${seconds}s`;
+
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `Envoyé il y a ${minutes}min`;
+
+    return `Envoyé il y a ${Math.floor(minutes / 60)}h`;
+  };
 
   const handleSaveProfile = async () => {
-    setError('')
-    setSuccess('')
-    
+    setError('');
+    setSuccess('');
+
     try {
       const response = await fetch(`${API_URL}/users/profile`, {
         method: 'PUT',
@@ -177,37 +177,37 @@ function UserProfile() {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify(formData)
-      })
+      });
 
       if (response.ok) {
-        const updatedUser = await response.json()
-        setUser(updatedUser)
-        setEditing(false)
-        setSuccess('Profil mis à jour avec succès!')
-        setTimeout(() => setSuccess(''), 3000)
+        const updatedUser = await response.json();
+        setUser(updatedUser);
+        setEditing(false);
+        setSuccess('Profil mis à jour avec succès!');
+        setTimeout(() => setSuccess(''), 3000);
       } else {
-        const data = await response.json()
-        setError(data.error || 'Erreur lors de la mise à jour')
+        const data = await response.json();
+        setError(data.error || 'Erreur lors de la mise à jour');
       }
     } catch (error) {
-      setError('Erreur de connexion')
+      setError('Erreur de connexion');
     }
-  }
+  };
 
   const handlePhotoUpload = async (e) => {
-    const file = e.target.files[0]
-    if (!file) return
+    const file = e.target.files[0];
+    if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      setError('La photo ne doit pas dépasser 5MB')
-      return
+      setError('La photo ne doit pas dépasser 5MB');
+      return;
     }
 
-    setUploadingPhoto(true)
-    setError('')
+    setUploadingPhoto(true);
+    setError('');
 
-    const formData = new FormData()
-    formData.append('photo', file)
+    const formData = new FormData();
+    formData.append('photo', file);
 
     try {
       const response = await fetch(`${API_URL}/users/profile/picture`, {
@@ -216,50 +216,44 @@ function UserProfile() {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: formData
-      })
+      });
 
       if (response.ok) {
-        const data = await response.json()
-        setUser(prev => ({ 
-          ...prev, 
-          profilePicture: data.profilePicture 
-        }))
-        
-        setSuccess('Photo de profil mise à jour!')
-        setTimeout(() => setSuccess(''), 3000)
-        
-        // Forcer le rechargement du composant
-        window.location.reload()
+        const data = await response.json();
+        setUser(prev => ({
+          ...prev,
+          profilePicture: data.profilePicture
+        }));
+
+        setSuccess('Photo de profil mise à jour!');
+        setTimeout(() => setSuccess(''), 3000);
+        window.location.reload();
       } else {
-        const data = await response.json()
-        setError(data.error || 'Erreur lors de l\'upload')
+        const data = await response.json();
+        setError(data.error || 'Erreur lors de l\'upload');
       }
     } catch (error) {
-      console.error('Erreur upload photo:', error)
-      setError('Erreur lors de l\'upload de la photo')
+      console.error('Erreur upload photo:', error);
+      setError('Erreur lors de l\'upload de la photo');
     } finally {
-      setUploadingPhoto(false)
+      setUploadingPhoto(false);
     }
-  }
+  };
 
   const handleDocumentUpload = async (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-
-    console.log('📄 Fichier sélectionné:', file.name, file.type, file.size)
+    const file = e.target.files[0];
+    if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      setError('Le document ne doit pas dépasser 5MB')
-      return
+      setError('Le document ne doit pas dépasser 5MB');
+      return;
     }
 
-    setUploadingDocument(true)
-    setError('')
+    setUploadingDocument(true);
+    setError('');
 
-    const formData = new FormData()
-    formData.append('document', file)
-
-    console.log('📤 Envoi vers:', `${API_URL}/users/profile/identity`)
+    const formData = new FormData();
+    formData.append('document', file);
 
     try {
       const response = await fetch(`${API_URL}/users/profile/identity`, {
@@ -268,33 +262,42 @@ function UserProfile() {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: formData
-      })
+      });
 
-      console.log('📥 Response status:', response.status)
-      const data = await response.json()
-      console.log('📥 Response data:', data)
+      const data = await response.json();
 
       if (response.ok) {
-        setUser(prev => ({ 
-          ...prev, 
-          identityDocument: data.identityDocument 
-        }))
-        
-        setSuccess('Document d\'identité téléchargé! En attente de vérification.')
-        setTimeout(() => setSuccess(''), 5000)
-        
-        // Recharger le profil pour avoir les dernières données
-        fetchUserProfile()
+        setUser(prev => ({
+          ...prev,
+          identityDocument: data.identityDocument
+        }));
+
+        setSuccess('Document d\'identité téléchargé! En attente de vérification.');
+        setTimeout(() => setSuccess(''), 5000);
+        fetchUserProfile();
       } else {
-        setError(data.error || 'Erreur lors de l\'upload')
+        setError(data.error || 'Erreur lors de l\'upload');
       }
     } catch (error) {
-      console.error('❌ Erreur upload document:', error)
-      setError('Erreur lors de l\'upload du document')
+      console.error('❌ Erreur upload document:', error);
+      setError('Erreur lors de l\'upload du document');
     } finally {
-      setUploadingDocument(false)
+      setUploadingDocument(false);
     }
-  }
+  };
+
+  // ✅ Callback après vérification SMS réussie
+  const handlePhoneVerificationComplete = (phone) => {
+    setUser(prev => ({
+      ...prev,
+      phone: phone,
+      phoneVerified: true
+    }));
+
+    setSuccess('Téléphone vérifié avec succès !');
+    setTimeout(() => setSuccess(''), 3000);
+    setShowSMSVerification(false);
+  };
 
   if (loading) {
     return (
@@ -304,7 +307,7 @@ function UserProfile() {
           <p className="text-gray-600">Chargement du profil...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -317,25 +320,21 @@ function UserProfile() {
             <div className="relative">
               <div className="w-32 h-32 rounded-full overflow-hidden bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
                 {user?.profilePicture ? (
-                  <img 
+                  <img
                     src={`${API_URL}/users/avatar/${user.profilePicture}?t=${Date.now()}`}
                     alt="Photo de profil"
                     className="w-full h-full object-cover"
                     crossOrigin="anonymous"
                     onError={(e) => {
-                      console.error('Erreur chargement image via API, essai direct...')
-                      e.target.src = `http://localhost:3001/uploads/profiles/${user.profilePicture}?t=${Date.now()}`
-                      e.target.crossOrigin = "anonymous"
-                    }}
-                    onLoad={() => {
-                      console.log('✅ Image chargée:', user.profilePicture)
+                      e.target.src = `http://localhost:3001/uploads/profiles/${user.profilePicture}?t=${Date.now()}`;
+                      e.target.crossOrigin = "anonymous";
                     }}
                   />
                 ) : (
                   <User size={48} className="text-white" />
                 )}
               </div>
-              
+
               <button
                 onClick={() => photoInputRef.current?.click()}
                 disabled={uploadingPhoto}
@@ -347,7 +346,7 @@ function UserProfile() {
                   <Camera size={16} />
                 )}
               </button>
-              
+
               <input
                 ref={photoInputRef}
                 type="file"
@@ -361,7 +360,7 @@ function UserProfile() {
             <div className="flex-1 text-center md:text-left">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">{user?.fullName}</h1>
               <p className="text-gray-600 mb-4">{user?.email}</p>
-              
+
               {/* Rating et vérifications */}
               <div className="flex flex-wrap justify-center md:justify-start gap-4">
                 <div className="flex items-center gap-2 bg-yellow-50 px-3 py-1 rounded-full">
@@ -370,7 +369,7 @@ function UserProfile() {
                     {user?.rating > 0 ? `${user.rating.toFixed(1)} (${user.totalRatings})` : 'Pas encore noté'}
                   </span>
                 </div>
-                
+
                 <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${
                   emailStatus.emailVerified ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'
                 }`}>
@@ -402,29 +401,29 @@ function UserProfile() {
           </div>
         </div>
 
-        {/* ✅ AJOUT : Section Vérification Email */}
+        {/* ✅ Section Vérification Email */}
         {!emailStatus.emailVerified && (
           <div className="bg-orange-50 border border-orange-200 rounded-2xl p-6 mb-8">
             <div className="flex items-start gap-4">
               <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
                 <AlertCircle className="text-orange-600" size={20} />
               </div>
-              
+
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="font-semibold text-orange-800">Email non vérifié</h3>
                   <Shield className="text-orange-500" size={18} />
                 </div>
-                
+
                 <p className="text-orange-700 text-sm mb-4">
-                  Votre adresse email <strong>{emailStatus.email}</strong> n'a pas encore été vérifiée. 
+                  Votre adresse email <strong>{emailStatus.email}</strong> n'a pas encore été vérifiée.
                   Vérifiez votre boîte mail ou demandez un nouveau lien de vérification.
                 </p>
 
                 {emailMessage && (
                   <div className={`mb-4 p-3 rounded-lg flex items-center gap-2 text-sm ${
-                    emailMessageType === 'success' 
-                      ? 'bg-green-100 text-green-700 border border-green-200' 
+                    emailMessageType === 'success'
+                      ? 'bg-green-100 text-green-700 border border-green-200'
                       : 'bg-red-100 text-red-700 border border-red-200'
                   }`}>
                     {emailMessageType === 'success' ? (
@@ -445,7 +444,7 @@ function UserProfile() {
                       </>
                     )}
                   </div>
-                  
+
                   <button
                     onClick={handleResendVerification}
                     disabled={isResendingEmail || !canResendEmail}
@@ -804,6 +803,80 @@ function UserProfile() {
           </div>
         </div>
 
+        {/* Vérification du téléphone */}
+        <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
+          <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
+            <Phone className="text-blue-600" size={24} />
+            Vérification du téléphone
+          </h2>
+
+          <div className="space-y-6">
+            <div className={`p-4 rounded-xl border-2 ${
+              user?.phoneVerified 
+                ? 'border-green-200 bg-green-50' 
+                : user?.phone 
+                ? 'border-orange-200 bg-orange-50'
+                : 'border-gray-200 bg-gray-50'
+            }`}>
+              <div className="flex items-center gap-3 mb-3">
+                {user?.phoneVerified ? (
+                  <CheckCircle className="text-green-600" size={24} />
+                ) : user?.phone ? (
+                  <AlertCircle className="text-orange-600" size={24} />
+                ) : (
+                  <Phone className="text-gray-400" size={24} />
+                )}
+                
+                <div className="flex-1">
+                  <h3 className="font-semibold">
+                    {user?.phoneVerified 
+                      ? 'Téléphone vérifié' 
+                      : user?.phone 
+                      ? 'Téléphone en attente de vérification'
+                      : 'Aucun téléphone renseigné'
+                    }
+                  </h3>
+                  
+                  {user?.phone && (
+                    <p className="text-sm text-gray-600 mt-1">
+                      {user.phone}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <PhoneVerificationBadge 
+                    isVerified={user?.phoneVerified}
+                    onClick={() => setShowSMSVerification(true)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {!user?.phoneVerified && (
+              <div className="text-center">
+                <button
+                  onClick={() => setShowSMSVerification(true)}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
+                >
+                  <Phone size={20} />
+                  {user?.phone ? 'Vérifier mon téléphone' : 'Ajouter et vérifier un téléphone'}
+                </button>
+              </div>
+            )}
+
+            <div className="bg-blue-50 p-4 rounded-xl">
+              <h4 className="font-semibold text-blue-900 mb-2">Pourquoi vérifier votre téléphone ?</h4>
+              <ul className="text-sm text-blue-800 space-y-1">
+                <li>• <strong>Sécurité renforcée</strong> : Protection contre les fraudes</li>
+                <li>• <strong>Communication directe</strong> : Contact en cas d'urgence</li>
+                <li>• <strong>Accès aux transports</strong> : Requis pour proposer/demander</li>
+                <li>• <strong>Confiance accrue</strong> : Badge vérifié visible par tous</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
         {/* Statistiques et historique */}
         <div className="mt-8 bg-white rounded-2xl shadow-xl p-8">
           <h2 className="text-2xl font-bold mb-6">Statistiques</h2>
@@ -832,10 +905,18 @@ function UserProfile() {
             </div>
           </div>
         </div>
+
+        {/* Modal de vérification SMS */}
+        <SMSVerification
+          user={user}
+          isOpen={showSMSVerification}
+          onClose={() => setShowSMSVerification(false)}
+          onVerificationComplete={handlePhoneVerificationComplete}
+          mode="profile"
+        />
       </div>
     </div>
-  )
+  );
 }
 
-// ✅ CORRECTION : Export par défaut
-export default UserProfile
+export default UserProfile;

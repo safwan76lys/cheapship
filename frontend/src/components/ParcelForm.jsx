@@ -21,6 +21,7 @@ import {
   Star,
   Shield
 } from 'lucide-react'
+import SMSVerification, { PhoneVerificationGuard } from './SMSVerification';
 
 const API_URL = 'https://cheapship-back.onrender.com/api'
 
@@ -178,6 +179,28 @@ function ParcelFormPremium() {
   })
 
   const [estimatedCost, setEstimatedCost] = useState(null)
+
+  // États pour la vérification SMS
+  const [showSMSVerification, setShowSMSVerification] = useState(false);
+  const [user, setUser] = useState(null);
+
+  // Charger les données utilisateur
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+  }, []);
+
+  // Fonction callback pour la vérification SMS complétée
+  const handlePhoneVerificationComplete = (phone) => {
+    setShowSMSVerification(false);
+    // Mettre à jour l'état utilisateur
+    const updatedUser = { ...user, phone, phoneVerified: true };
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    setSuccess('Téléphone vérifié ! Vous pouvez maintenant envoyer des colis.');
+  };
 
   // Calcul de distance avec coordonnées GPS
   const calculateDistance = () => {
@@ -342,6 +365,8 @@ function ParcelFormPremium() {
         body: JSON.stringify(submitData)
       })
 
+      const data = await response.json()
+
       if (response.ok) {
         setSuccess('Demande de transport créée avec succès!')
         // Reset form
@@ -372,7 +397,13 @@ function ParcelFormPremium() {
         })
         setCurrentStep(1)
       } else {
-        const data = await response.json()
+        // Gestion de l'erreur de vérification téléphone
+        if (data.requiresPhoneVerification || data.code === 'PHONE_VERIFICATION_REQUIRED') {
+          setShowSMSVerification(true);
+          setError('Vérification du téléphone requise pour continuer');
+          return;
+        }
+        
         setError(data.error || 'Erreur lors de la création')
       }
     } catch (error) {
@@ -930,23 +961,28 @@ function ParcelFormPremium() {
                 <ArrowRight size={20} />
               </button>
             ) : (
-              <button
-                onClick={handleSubmit}
-                disabled={loading}
-                className="px-8 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center gap-2"
+              <PhoneVerificationGuard
+                isVerified={user?.phoneVerified}
+                onVerificationRequired={() => setShowSMSVerification(true)}
               >
-                {loading ? (
-                  <>
-                    <Loader className="animate-spin" size={20} />
-                    Publication...
-                  </>
-                ) : (
-                  <>
-                    <Plus size={20} />
-                    Publier la demande
-                  </>
-                )}
-              </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  className="px-8 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 disabled:opacity-50 transition-colors flex items-center gap-2"
+                >
+                  {loading ? (
+                    <>
+                      <Loader className="animate-spin" size={20} />
+                      Publication...
+                    </>
+                  ) : (
+                    <>
+                      <Plus size={20} />
+                      Publier la demande
+                    </>
+                  )}
+                </button>
+              </PhoneVerificationGuard>
             )}
           </div>
         </div>
@@ -966,6 +1002,15 @@ function ParcelFormPremium() {
             </div>
           </div>
         </div>
+
+        {/* Modal de vérification SMS */}
+        <SMSVerification
+          user={user}
+          isOpen={showSMSVerification}
+          onClose={() => setShowSMSVerification(false)}
+          onVerificationComplete={handlePhoneVerificationComplete}
+          mode="required"
+        />
       </div>
     </div>
   )

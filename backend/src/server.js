@@ -5,6 +5,7 @@ const morgan = require('morgan');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
+const smsRoutes = require('./routes/sms');
 
 // Services
 const { scheduleAlertCleanup } = require('./jobs/alertCleanup');
@@ -384,6 +385,7 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use('/api/sms', smsRoutes);
 // ================================
 // MIDDLEWARE ANALYTICS TRACKING
 // ================================
