@@ -1,16 +1,28 @@
+// src/middleware/rate-limiters.js
+
 const rateLimit = require('express-rate-limit');
+
+// Définition sécurisée de trustProxy
+// En production : confiance au 1er proxy (Render, Cloudflare, etc.)
+// En développement : pas de proxy
+const trustProxy = process.env.NODE_ENV === 'production' ? 1 : false;
+
+// ================================
+// RATE LIMITERS PRINCIPAUX
+// ================================
 
 // Rate limiter général pour l'API
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requêtes par IP par fenêtre
+  max: 100,
+  trustProxy,
+  validate: true,
   message: {
     error: 'Trop de requêtes depuis cette IP, réessayez dans 15 minutes'
   },
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => {
-    // Skip rate limiting en développement pour certaines routes
     if (process.env.NODE_ENV === 'development') {
       return req.path.startsWith('/api/health') || req.path.startsWith('/api/docs');
     }
@@ -21,7 +33,9 @@ const apiLimiter = rateLimit({
 // Rate limiter strict pour l'authentification
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 tentatives par IP
+  max: 5,
+  trustProxy,
+  validate: true,
   message: {
     error: 'Trop de tentatives de connexion, réessayez dans 15 minutes'
   },
@@ -33,7 +47,9 @@ const authLimiter = rateLimit({
 // Rate limiter pour les messages
 const messageLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 30, // 30 messages par minute
+  max: 30,
+  trustProxy,
+  validate: true,
   message: {
     error: 'Trop de messages envoyés, ralentissez un peu'
   },
@@ -44,7 +60,9 @@ const messageLimiter = rateLimit({
 // Rate limiter pour les uploads
 const uploadLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
-  max: 10, // 10 uploads par 10 minutes
+  max: 10,
+  trustProxy,
+  validate: true,
   message: {
     error: 'Trop d\'uploads, réessayez dans 10 minutes'
   },
@@ -52,25 +70,30 @@ const uploadLimiter = rateLimit({
   legacyHeaders: false
 });
 
-// ✅ NOUVEAU : Rate limiter pour la vérification email
+// Rate limiter pour le renvoi de vérification email
 const resendVerificationLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 1, // 1 tentative par minute par IP
+  max: 1,
+  trustProxy,
+  validate: true,
   message: {
     error: 'Trop de tentatives. Veuillez attendre 1 minute avant de renvoyer un email.'
   },
   standardHeaders: true,
   legacyHeaders: false,
-  skipSuccessfulRequests: false // Compte toutes les tentatives
+  skipSuccessfulRequests: false
 });
 
 // ================================
-// LIMITEURS SMS (à ajouter)
+// RATE LIMITERS SMS
 // ================================
 
+// Limiteur pour demander un code SMS (ex: /api/auth/send-sms)
 const smsLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 heure
-  max: 3, // 3 SMS par heure max
+  max: 3,
+  trustProxy,
+  validate: true,
   message: {
     error: 'Trop de demandes SMS',
     message: 'Vous avez envoyé trop de demandes SMS. Réessayez dans 1 heure.',
@@ -83,9 +106,12 @@ const smsLimiter = rateLimit({
   }
 });
 
+// Limiteur pour vérifier un code SMS (ex: /api/auth/verify-sms)
 const smsVerifyLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 tentatives de vérification par 15 min
+  max: 5,
+  trustProxy,
+  validate: true,
   message: {
     error: 'Trop de tentatives de vérification',
     message: 'Trop de tentatives de vérification du code SMS. Réessayez dans 15 minutes.',
@@ -96,9 +122,9 @@ const smsVerifyLimiter = rateLimit({
   keyGenerator: (req) => {
     return `sms_verify_${req.user?.id || req.ip}`;
   }
-}); // ✅ Accolade fermée ici
+});
 
-// ✅ Export unique et complet
+// ✅ Export complet
 module.exports = {
   apiLimiter,
   authLimiter,
