@@ -203,3 +203,4 @@ export const utils = {
     return error.message || 'Une erreur est survenue.';
   }
 };
+export const API_URL = API_CONFIG.baseURL;
