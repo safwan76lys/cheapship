@@ -204,7 +204,48 @@ router.put('/:id', async (req, res) => {
     });
   }
 });
+// Récupérer mes voyages
+router.get('/my-trips', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { status, page = 1, limit = 10 } = req.query;
 
+    const whereClause = { userId };
+    if (status && ['ACTIVE', 'COMPLETED', 'CANCELLED'].includes(status)) {
+      whereClause.status = status;
+    }
+
+    const trips = await prisma.trip.findMany({
+      where: whereClause,
+      orderBy: {
+        createdAt: 'desc'
+      },
+      skip: (page - 1) * limit,
+      take: parseInt(limit)
+    });
+
+    const total = await prisma.trip.count({
+      where: whereClause
+    });
+
+    res.json({
+      success: true,
+      trips,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching my trips:', error);
+    res.status(500).json({ 
+      error: 'Erreur lors de la récupération des voyages' 
+    });
+  }
+});
 // NOUVELLE ROUTE : Rechercher des voyages
 router.get('/search', async (req, res) => {
   try {
