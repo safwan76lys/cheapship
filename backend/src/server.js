@@ -14,9 +14,9 @@ const { setupAlertSocket } = require('./socket/alertSocket');
 const app = express();
 
 // Configuration trust proxy pour Render
-app.set('trust proxy', true);
+app.set('trust proxy', 1);
 
-const PORT = process.env.PORT || 10000;
+const PORT = parseInt(process.env.PORT) || 10000;
 
 // Créer le serveur HTTP pour Socket.IO
 const httpServer = http.createServer(app);
@@ -1105,6 +1105,10 @@ try {
 if (process.env.NODE_ENV !== 'test') {
   httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Serveur démarré sur http://0.0.0.0:${PORT}`);
+    httpServer.on('error', (error) => {
+  console.error('❌ Échec du démarrage du serveur:', error.message);
+  process.exit(1);
+});
       console.log(`
 🚀 ===================================
    CHEAPSHIP ANALYTICS SERVER v4.0
