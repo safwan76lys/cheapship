@@ -286,14 +286,6 @@ try {
   console.warn('⚠️ Alert routes not found - créez routes/alerts.js');
 }
 
-try {
-  const smsRoutes = require('./routes/sms');
-  app.use('/api/sms', smsRoutes);
-  console.log('✅ SMS routes loaded');
-} catch (error) {
-  console.warn('⚠️ SMS routes not found');
-}
-
 // Routes analytics
 try {
   analyticsRoutes = require('./routes/analytics');
@@ -303,6 +295,44 @@ try {
   console.warn('⚠️ Analytics routes not found - créez routes/analytics.js');
   console.error('❌ Erreur complète:', error.message);
   console.error('❌ Stack:', error.stack);
+}
+
+// ================================
+// MIDDLEWARE SETUP
+// ================================
+
+// Body parsing - DOIT ÊTRE EN PREMIER
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Headers globaux pour tous les fichiers statiques
+app.use((req, res, next) => {
+  res.header('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.header('Cross-Origin-Embedder-Policy', 'unsafe-none');
+  next();
+});
+
+// Logging
+if (process.env.NODE_ENV === 'production') {
+  app.use(morgan('combined'));
+} else {
+  app.use(morgan('dev'));
+}
+
+// Servir les fichiers statiques
+app.use('/uploads', express.static('uploads', {
+  setHeaders: (res) => {
+    res.header('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+}));
+
+// Routes SMS - APRÈS le body parsing
+try {
+  const smsRoutes = require('./routes/sms');
+  app.use('/api/sms', smsRoutes);
+  console.log('✅ SMS routes loaded');
+} catch (error) {
+  console.warn('⚠️ SMS routes not found');
 }
 
 // Routes optionnelles supplémentaires
@@ -321,47 +351,6 @@ try {
 } catch (error) {
   console.warn('⚠️ Phone prefixes routes not found');
 }
-
-// ================================
-// MIDDLEWARE SETUP
-// ================================
-
-// Headers globaux pour tous les fichiers statiques
-app.use((req, res, next) => {
-  res.header('Cross-Origin-Resource-Policy', 'cross-origin');
-  res.header('Cross-Origin-Embedder-Policy', 'unsafe-none');
-  next();
-});
-
-// Body parsing
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Logging en production
-if (process.env.NODE_ENV === 'production') {
-  app.use(morgan('combined'));
-} else {
-  app.use(morgan('dev'));
-}
-
-// Servir les fichiers statiques
-app.use('/uploads', express.static('uploads', {
-  setHeaders: (res) => {
-    res.header('Cross-Origin-Resource-Policy', 'cross-origin');
-  }
-}));
-
-// ================================
-// INJECTION DU SERVICE SOCKET DANS LES ROUTES
-// ================================
-
-// Middleware pour injecter socketService dans req
-app.use((req, res, next) => {
-  if (socketService) {
-    req.socketService = socketService;
-  }
-  next();
-});
 
 // ================================
 // MIDDLEWARE ANALYTICS TRACKING
