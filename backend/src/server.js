@@ -66,49 +66,82 @@ app.use(helmet({
 // ================================
 // CORS CONFIGURATION
 // ================================
+// ================================
+// CORS CONFIGURATION CORRIGÉE
+// ================================
+
 const allowedOrigins = (() => {
   const origins = [
+    // URLs de développement
     'http://localhost:3000',
     'http://localhost:5173',
     'http://127.0.0.1:5173',
     'http://127.0.0.1:3000',
+    
+    // URLs de production Render (IMPORTANT)
     'https://cheapship-frontend.onrender.com'
   ];
 
-  // URLs de production pour Render
+  // Ajout conditionnel pour production
   if (process.env.NODE_ENV === 'production') {
-    origins.push('https://cheapship-frontend.onrender.com');
-    
-    if (process.env.RENDER_EXTERNAL_URL) {
-      origins.push(`https://${process.env.RENDER_EXTERNAL_URL}`);
-    }
-    
+    // Variables d'environnement personnalisées
     if (process.env.FRONTEND_URL) {
       origins.push(process.env.FRONTEND_URL);
     }
+    
+    // URL backend pour Socket.IO self-reference
+    if (process.env.RENDER_EXTERNAL_URL) {
+      origins.push(`https://${process.env.RENDER_EXTERNAL_URL}`);
+    }
   }
 
-  console.log('CORS Origins configurées:', origins);
+  console.log('🌐 CORS Origins configurées:', origins);
   return origins;
 })();
 
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    // IMPORTANT: Autoriser les requêtes sans origin (Postman, apps mobiles)
+    if (!origin) {
+      console.log('✅ Requête sans origin autorisée (Postman/Mobile)');
+      return callback(null, true);
+    }
+    
+    // Vérifier si l'origin est autorisée
+    if (allowedOrigins.includes(origin)) {
+      console.log(`✅ CORS autorisé pour: ${origin}`);
       callback(null, true);
     } else {
-      console.warn(`CORS rejeté pour: ${origin}`);
+      console.error(`❌ CORS REJETÉ pour: ${origin}`);
+      console.error(`📝 Origins autorisées:`, allowedOrigins);
       callback(new Error(`Origin non autorisée: ${origin}`));
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept'],
-  exposedHeaders: ['Content-Length', 'Content-Type']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'Origin', 
+    'X-Requested-With', 
+    'Accept',
+    'X-Auth-Token'
+  ],
+  exposedHeaders: ['Content-Length', 'Content-Type'],
+  maxAge: 86400, // Cache preflight 24h
+  optionsSuccessStatus: 200 // Support legacy browsers
 };
 
+// Appliquer CORS
 app.use(cors(corsOptions));
 
+// Middleware pour débugger CORS en développement
+if (process.env.NODE_ENV === 'development') {
+  app.use((req, res, next) => {
+    console.log(`🔍 Requête ${req.method} depuis: ${req.headers.origin || 'no-origin'}`);
+    next();
+  });
+}
 // ================================
 // SOCKET.IO SETUP
 // ================================
