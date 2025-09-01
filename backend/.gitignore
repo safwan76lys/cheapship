@@ -175,3 +175,6 @@ credentials.json
 # Données de test avec informations réelles
 test-data-real.json
 production-dump.sql
+*.sql
+*.dump
+*.backup
