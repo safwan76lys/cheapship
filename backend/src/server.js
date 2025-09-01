@@ -4,8 +4,9 @@ const cors = require('cors');
 const morgan = require('morgan');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const { ipKeyGenerator } = require('express-rate-limit');
 require('dotenv').config();
-const smsRoutes = require('./routes/sms');
+const path = require('path');
 
 // Services
 const { scheduleAlertCleanup } = require('./jobs/alertCleanup');
@@ -28,24 +29,32 @@ const httpServer = http.createServer(app);
 // Rate limiting
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // ✅ TRÈS ÉLEVÉ pour éviter les 429 en dev
-  message: 'Trop de requêtes, réessayez plus tard',
+  max: process.env.NODE_ENV === 'production' ? 100 : 200,
+  message: {
+    error: 'Trop de requêtes depuis cette IP',
+    retryAfter: '15 minutes'
+  },
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => {
-    // ✅ Ignorer complètement le rate limiting en développement
-    return process.env.NODE_ENV === 'development';
-  }
+  trustProxy: 1,
+  keyGenerator: (req) => {
+    return ipKeyGenerator(req, { ipv6Subnet: 64 });
+  },
+  validate: true
 });
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 1000, // ✅ TRÈS ÉLEVÉ pour éviter les blocages
-  message: 'Trop de tentatives de connexion',
-  skip: (req) => {
-    // ✅ Ignorer complètement en développement
-    return process.env.NODE_ENV === 'development';
-  }
+  max: process.env.NODE_ENV === 'production' ? 5 : 10,
+  message: {
+    error: 'Trop de tentatives de connexion',
+    retryAfter: '15 minutes'
+  },
+  trustProxy: 1,
+  keyGenerator: (req) => {
+    return ipKeyGenerator(req, { ipv6Subnet: 64 });
+  },
+  validate: true
 });
 
 // Security headers
@@ -63,20 +72,17 @@ const allowedOrigins = (() => {
     'http://localhost:5173',
     'http://127.0.0.1:5173',
     'http://127.0.0.1:3000',
-   'https://cheapship-frontend.onrender.com'
+    'https://cheapship-frontend.onrender.com'
   ];
 
   // URLs de production pour Render
   if (process.env.NODE_ENV === 'production') {
-    // URL frontend Render (sera mise à jour après déploiement)
     origins.push('https://cheapship-frontend.onrender.com');
     
-    // URL backend pour Socket.IO self-reference
     if (process.env.RENDER_EXTERNAL_URL) {
       origins.push(`https://${process.env.RENDER_EXTERNAL_URL}`);
     }
     
-    // Variable d'environnement custom
     if (process.env.FRONTEND_URL) {
       origins.push(process.env.FRONTEND_URL);
     }
@@ -88,7 +94,6 @@ const allowedOrigins = (() => {
 
 const corsOptions = {
   origin: (origin, callback) => {
-    // Autoriser les requêtes sans origin (apps mobiles, Postman)
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -107,14 +112,21 @@ app.use(cors(corsOptions));
 // ================================
 // SOCKET.IO SETUP
 // ================================
-// Configuration Socket.IO
 const io = require('socket.io')(httpServer, {
   cors: corsOptions,
   transports: ['websocket', 'polling'],
-  pingTimeout: 60000,
+  pingTimeout: 120000,
   pingInterval: 25000,
   upgradeTimeout: 30000,
-  allowEIO3: true
+  allowEIO3: true,
+  allowRequest: (req, callback) => {
+    callback(null, true);
+  },
+  maxHttpBufferSize: 1e6,
+  connectionStateRecovery: {
+    maxDisconnectionDuration: 2 * 60 * 1000,
+    skipMiddlewares: true,
+  }
 });
 
 let socketService;
@@ -133,13 +145,48 @@ try {
   console.warn('⚠️ Alert Socket.IO setup failed:', error.message);
 }
 
+// Gestion des événements Socket.IO
+io.on('connection', (socket) => {
+  console.log(`✅ Socket connecté: ${socket.id}`);
+  
+  const heartbeat = setInterval(() => {
+    socket.emit('heartbeat', { timestamp: Date.now() });
+  }, 30000);
+  
+  socket.on('heartbeat-response', (data) => {
+    console.log(`💓 Heartbeat reçu de ${socket.id}:`, data);
+  });
+  
+  socket.on('disconnect', (reason) => {
+    console.log(`❌ Socket déconnecté: ${socket.id}, raison: ${reason}`);
+    clearInterval(heartbeat);
+  });
+  
+  socket.on('connect_error', (error) => {
+    console.error(`🚨 Erreur connexion Socket ${socket.id}:`, error);
+  });
+  
+  socket.on('error', (error) => {
+    console.error(`🚨 Erreur Socket ${socket.id}:`, error);
+  });
+});
+
+io.engine.on('connection_error', (err) => {
+  console.error('🚨 Socket.IO connection error:', {
+    message: err.message,
+    description: err.description,
+    context: err.context,
+    type: err.type
+  });
+});
+
 // ================================
 // ROUTE IMPORTS (avec gestion d'erreurs)
 // ================================
 
 let authRoutes, userRoutes, reviewRoutes, tripRoutes, parcelRoutes;
 let messageRoutes, favoriteRoutes, notificationRoutes, alertRoutes;
-let analyticsRoutes; // ✅ NOUVEAU
+let analyticsRoutes;
 
 // Routes existantes
 try {
@@ -206,7 +253,15 @@ try {
   console.warn('⚠️ Alert routes not found - créez routes/alerts.js');
 }
 
-// ✅ ROUTES ANALYTICS
+try {
+  const smsRoutes = require('./routes/sms');
+  app.use('/api/sms', smsRoutes);
+  console.log('✅ SMS routes loaded');
+} catch (error) {
+  console.warn('⚠️ SMS routes not found');
+}
+
+// Routes analytics
 try {
   analyticsRoutes = require('./routes/analytics');
   console.log('✅ Analytics routes found');
@@ -249,121 +304,11 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-
-// ================================
-// EXPORT ET CONFIGURATION FINALE
-// ================================
-
-// Export de l'app pour les tests
-module.exports = app;
-
-// Export des services pour utilisation externe
-module.exports.services = {
-  socketService,
-  alertSocketManager
-};
-
-// Export de la configuration pour référence
-module.exports.config = {
-  port: PORT,
-  environment: process.env.NODE_ENV,
-  corsOptions,
-  features: {
-    analytics: !!analyticsRoutes,
-    alerts: !!alertRoutes,
-    socketIO: !!socketService,
-    tracking: true,
-    rateLimiting: true
-  }
-};
-
-// ================================
-// GESTIONNAIRES DE SIGNAUX SYSTÈME
-// ================================
-
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('🛑 SIGTERM reçu, arrêt gracieux du serveur...');
-  
-  if (httpServer) {
-    httpServer.close(() => {
-      console.log('✅ Serveur HTTP fermé');
-      
-      // Fermer les connexions Socket.IO
-      if (io) {
-        io.close(() => {
-          console.log('✅ Socket.IO fermé');
-        });
-      }
-      
-      // Fermer la connexion à la base de données si nécessaire
-      try {
-        const prisma = require('./config/database');
-        prisma.$disconnect().then(() => {
-          console.log('✅ Base de données déconnectée');
-          process.exit(0);
-        });
-      } catch (error) {
-        console.log('⚠️ Pas de connexion DB à fermer');
-        process.exit(0);
-      }
-    });
-  }
-});
-
-process.on('SIGINT', () => {
-  console.log('🛑 SIGINT reçu (Ctrl+C), arrêt du serveur...');
-  process.exit(0);
-});
-
-// Gestion des erreurs non capturées
-process.on('uncaughtException', (error) => {
-  console.error('🚨 Erreur non capturée:', error);
-  process.exit(1);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('🚨 Promise rejetée non gérée à:', promise, 'raison:', reason);
-  process.exit(1);
-});
-
-// ================================
-// INFORMATIONS DE DEBUG
-// ================================
-
-if (process.env.NODE_ENV === 'development') {
-  // Afficher des informations de debug en développement
-  console.log('\n🔧 Mode Développement - Informations Debug:');
-  console.log(`   • Node.js version: ${process.version}`);
-  console.log(`   • Platform: ${process.platform}`);
-  console.log(`   • Architecture: ${process.arch}`);
-  console.log(`   • Working directory: ${process.cwd()}`);
-  console.log(`   • Process ID: ${process.pid}`);
-  
-  // Afficher les variables d'environnement importantes (sans les secrets)
-  const importantEnvVars = [
-    'NODE_ENV',
-    'PORT',
-    'DATABASE_URL',
-    'FRONTEND_URL',
-    'MAIL_HOST'
-  ];
-  
-  console.log('\n🌍 Variables d\'environnement:');
-  importantEnvVars.forEach(varName => {
-    const value = process.env[varName];
-    if (value) {
-      // Masquer les URLs de base de données pour la sécurité
-      const displayValue = varName.includes('DATABASE_URL') 
-        ? '***configured***' 
-        : value;
-      console.log(`   • ${varName}: ${displayValue}`);
-    } else {
-      console.log(`   • ${varName}: ❌ Non défini`);
-    }
-  });
- } else {
+// Logging en production
+if (process.env.NODE_ENV === 'production') {
   app.use(morgan('combined'));
+} else {
+  app.use(morgan('dev'));
 }
 
 // Servir les fichiers statiques
@@ -385,7 +330,6 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use('/api/sms', smsRoutes);
 // ================================
 // MIDDLEWARE ANALYTICS TRACKING
 // ================================
@@ -690,7 +634,7 @@ if (alertRoutes) {
   app.use('/api/alerts', apiLimiter, trackEvent('alert_action'), alertRoutes);
 }
 
-// ✅ ROUTES ANALYTICS (NOUVELLES)
+// Routes analytics
 if (analyticsRoutes) {
   app.use('/api/analytics', apiLimiter, trackEvent('analytics_view'), analyticsRoutes);
 }
@@ -788,7 +732,6 @@ app.get('/api/docs', (req, res) => {
     };
   }
 
-  // ✅ DOCUMENTATION ANALYTICS
   if (analyticsRoutes) {
     availableEndpoints.analytics = {
       'GET /api/analytics/dashboard': 'Dashboard analytics principal',
@@ -844,8 +787,9 @@ app.get('/api/docs', (req, res) => {
     }
   });
 });
+
 // ================================
-// GEONAMES PROXY ROUTES (AJOUTEZ ICI)
+// GEONAMES PROXY ROUTES
 // ================================
 
 // Proxy pour la recherche de villes (remplace geonames search)
@@ -883,6 +827,7 @@ app.get('/api/location/reverse', async (req, res) => {
     res.status(500).json({ error: 'Reverse geocoding service unavailable' });
   }
 });
+
 // ================================
 // HEALTH CHECK & STATUS
 // ================================
@@ -904,7 +849,7 @@ app.get('/api/health', (req, res) => {
       favorites: !!favoriteRoutes,
       notifications: !!notificationRoutes,
       alerts: !!alertRoutes,
-      analytics: !!analyticsRoutes // ✅ NOUVEAU
+      analytics: !!analyticsRoutes
     },
     database: 'connected',
     analytics: !!analyticsRoutes ? 'enabled' : 'disabled',
@@ -1103,13 +1048,8 @@ try {
 // ================================
 
 if (process.env.NODE_ENV !== 'test') {
-  httpServer.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Serveur démarré sur http://0.0.0.0:${PORT}`);
-    httpServer.on('error', (error) => {
-  console.error('❌ Échec du démarrage du serveur:', error.message);
-  process.exit(1);
-});
-      console.log(`
+  const server = httpServer.listen(PORT, '0.0.0.0', () => {
+    console.log(`
 🚀 ===================================
    CHEAPSHIP ANALYTICS SERVER v4.0
 ===================================
@@ -1212,10 +1152,10 @@ if (process.env.NODE_ENV !== 'test') {
 
       // URL dynamique selon l'environnement
       const socketUrl = process.env.NODE_ENV === 'production' 
-      ? `wss://cheapship-back.onrender.com`
-      : `ws://localhost:${PORT}`;
+        ? `wss://cheapship-back.onrender.com`
+        : `ws://localhost:${PORT}`;
       console.log(`   • Connection URL: ${socketUrl}`);
-      }
+    }
     
     console.log(`\n🔐 Security & Performance:`);
     console.log(`   • Rate limiting: ✅ (100 req/15min general, 5 req/15min auth)`);
@@ -1252,75 +1192,13 @@ if (process.env.NODE_ENV !== 'test') {
     console.log(`🔗 Cron job: Alert cleanup scheduled daily at 02:00`);
     console.log(`===================================\n`);
   });
+
+  // Gestion d'erreur du serveur
+  server.on('error', (error) => {
+    console.error('❌ Échec du démarrage du serveur:', error.message);
+    process.exit(1);
+  });
 }
-
-// ================================
-// EXPORT MODULAIRE AVANCÉ
-// ================================
-
-// Export principal de l'application
-module.exports = app;
-
-// Export des services pour utilisation externe
-module.exports.services = {
-  socketService: socketService || null,
-  alertSocketManager: alertSocketManager || null,
-  io: io || null
-};
-
-// Export de la configuration complète
-module.exports.config = {
-  port: PORT,
-  environment: process.env.NODE_ENV,
-  corsOptions,
-  features: {
-    analytics: !!analyticsRoutes,
-    alerts: !!alertRoutes,
-    messages: !!messageRoutes,
-    favorites: !!favoriteRoutes,
-    notifications: !!notificationRoutes,
-    socketIO: !!socketService,
-    tracking: true,
-    rateLimiting: true,
-    fileUploads: true,
-    documentation: true
-  },
-  routes: {
-    essential: {
-      auth: !!authRoutes,
-      users: !!userRoutes,
-      trips: !!tripRoutes,
-      parcels: !!parcelRoutes,
-      reviews: !!reviewRoutes
-    },
-    optional: {
-      analytics: !!analyticsRoutes,
-      alerts: !!alertRoutes,
-      messages: !!messageRoutes,
-      favorites: !!favoriteRoutes,
-      notifications: !!notificationRoutes
-    }
-  }
-};
-
-// Export des métadonnées de l'API
-module.exports.metadata = {
-  name: 'Cheapship Analytics API',
-  version: '4.0.0',
-  description: 'Complete analytics platform with AI insights and mobile optimization',
-  author: 'Cheapship Team',
-  license: 'MIT',
-  features: [
-    'Advanced Analytics Dashboard',
-    'AI-Powered Predictions',
-    'Mobile-First Design',
-    'Real-time Tracking',
-    'Smart Alerts System',
-    'Financial Insights',
-    'Trust Metrics',
-    'Performance Analytics'
-  ]
-};
 
 // ================================
 // GESTIONNAIRES DE SIGNAUX SYSTÈME
@@ -1512,8 +1390,72 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // ================================
-// EXPORT FINAL DES UTILITAIRES
+// EXPORT MODULAIRE AVANCÉ
 // ================================
+
+// Export principal de l'application
+module.exports = app;
+
+// Export des services pour utilisation externe
+module.exports.services = {
+  socketService: socketService || null,
+  alertSocketManager: alertSocketManager || null,
+  io: io || null
+};
+
+// Export de la configuration complète
+module.exports.config = {
+  port: PORT,
+  environment: process.env.NODE_ENV,
+  corsOptions,
+  features: {
+    analytics: !!analyticsRoutes,
+    alerts: !!alertRoutes,
+    messages: !!messageRoutes,
+    favorites: !!favoriteRoutes,
+    notifications: !!notificationRoutes,
+    socketIO: !!socketService,
+    tracking: true,
+    rateLimiting: true,
+    fileUploads: true,
+    documentation: true
+  },
+  routes: {
+    essential: {
+      auth: !!authRoutes,
+      users: !!userRoutes,
+      trips: !!tripRoutes,
+      parcels: !!parcelRoutes,
+      reviews: !!reviewRoutes
+    },
+    optional: {
+      analytics: !!analyticsRoutes,
+      alerts: !!alertRoutes,
+      messages: !!messageRoutes,
+      favorites: !!favoriteRoutes,
+      notifications: !!notificationRoutes
+    }
+  }
+};
+
+// Export des métadonnées de l'API
+module.exports.metadata = {
+  name: 'Cheapship Analytics API',
+  version: '4.0.0',
+  description: 'Complete analytics platform with AI insights and mobile optimization',
+  author: 'Cheapship Team',
+  license: 'MIT',
+  features: [
+    'Advanced Analytics Dashboard',
+    'AI-Powered Predictions',
+    'Mobile-First Design',
+    'Real-time Tracking',
+    'Smart Alerts System',
+    'Financial Insights',
+    'Trust Metrics',
+    'Performance Analytics'
+  ]
+};
 
 // Fonctions utilitaires exportées
 module.exports.utils = {
@@ -1550,5 +1492,28 @@ module.exports.utils = {
     }
   })
 };
+// ================================
+// EXPORT FINAL
+// ================================
 
+module.exports = app;
+
+module.exports.services = {
+  socketService,
+  alertSocketManager,
+  io
+};
+
+module.exports.config = {
+  port: PORT,
+  environment: process.env.NODE_ENV,
+  corsOptions,
+  features: {
+    analytics: !!analyticsRoutes,
+    alerts: !!alertRoutes,
+    messages: !!messageRoutes,
+    socketIO: !!socketService,
+    rateLimiting: true
+  }
+};
 console.log('🎉 Cheapship Analytics Server v4.0 - Initialization Complete! 🚀');
