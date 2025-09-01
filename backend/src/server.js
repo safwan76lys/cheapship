@@ -16,7 +16,7 @@ const app = express();
 // Configuration trust proxy pour Render
 app.set('trust proxy', true);
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 10000;
 
 // Créer le serveur HTTP pour Socket.IO
 const httpServer = http.createServer(app);
@@ -1103,8 +1103,9 @@ try {
 // ================================
 
 if (process.env.NODE_ENV !== 'test') {
-  httpServer.listen(PORT, () => {
-    console.log(`
+  httpServer.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Serveur démarré sur http://0.0.0.0:${PORT}`);
+      console.log(`
 🚀 ===================================
    CHEAPSHIP ANALYTICS SERVER v4.0
 ===================================
