@@ -1,6 +1,7 @@
 // frontend/src/config/api.js
 // Configuration API centralisée avec validation et utilitaires
-
+console.log('🔧 ENV Debug:', import.meta.env);
+console.log('🔧 API_CONFIG:', API_CONFIG);
 // Validation des URLs critiques
 const validateUrl = (url, name) => {
   if (!url) {
@@ -18,9 +19,10 @@ const validateUrl = (url, name) => {
 };
 
 // Configuration principale
+
 export const API_CONFIG = {
-  baseURL: import.meta.env.VITE_API_URL,
-  socketURL: import.meta.env.VITE_SOCKET_URL,
+  baseURL: import.meta.env.VITE_API_URL || 'https://cheapship-back.onrender.com/api',
+  socketURL: import.meta.env.VITE_SOCKET_URL || 'https://cheapship-back.onrender.com',
   timeout: parseInt(import.meta.env.VITE_API_TIMEOUT) || 30000
 };
 
