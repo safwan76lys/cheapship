@@ -228,7 +228,14 @@ try {
 } catch (error) {
   console.warn('⚠️ Auth routes not found');
 }
-
+// SMS Routes
+try {
+  const smsRoutes = require('./routes/sms');
+  app.use('/api/sms', smsRoutes);
+  console.log('✅ SMS routes loaded');
+} catch (error) {
+  console.warn('⚠️ SMS routes not found');
+}
 try {
   userRoutes = require('./routes/users');
   console.log('✅ User routes found');
