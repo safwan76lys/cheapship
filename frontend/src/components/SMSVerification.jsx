@@ -579,7 +579,7 @@ export const PhoneVerificationBadge = ({ isVerified, onClick }) => {
       onClick={onClick}
       className="inline-flex items-center space-x-1 bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-medium hover:bg-orange-200 transition-colors"
     >
-      <ExclamationCircleIcon size={14} />
+      <AlertCircle size={14} />
       <span>Vérifier le téléphone</span>
     </button>
   );
