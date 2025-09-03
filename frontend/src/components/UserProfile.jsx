@@ -23,7 +23,6 @@ import {
 } from 'lucide-react';
 import SMSVerification, { PhoneVerificationBadge } from './SMSVerification';
 
-// ✅ CORRECTION : URL sans espaces
 const API_URL = 'https://cheapship-back.onrender.com/api';
 
 function UserProfile() {
@@ -36,7 +35,6 @@ function UserProfile() {
   const [success, setSuccess] = useState('');
   const [showSMSVerification, setShowSMSVerification] = useState(false);
 
-  // ✅ États pour la vérification email
   const [emailStatus, setEmailStatus] = useState({
     emailVerified: false,
     email: ''
@@ -97,7 +95,6 @@ function UserProfile() {
     }
   };
 
-  // ✅ Charger le statut email
   const loadEmailStatus = async () => {
     try {
       const response = await fetch(`${API_URL}/auth/email-status`, {
@@ -115,7 +112,6 @@ function UserProfile() {
     }
   };
 
-  // ✅ Renvoyer email de vérification
   const handleResendVerification = async () => {
     setIsResendingEmail(true);
     setEmailMessage('');
@@ -136,7 +132,6 @@ function UserProfile() {
         setEmailMessage('Email de vérification envoyé avec succès ! Vérifiez votre boîte mail.');
         setEmailMessageType('success');
         setLastEmailSent(new Date());
-
         setTimeout(() => setCanResendEmail(true), 60000);
       } else {
         setEmailMessage(data.error || 'Erreur lors de l\'envoi de l\'email');
@@ -152,7 +147,6 @@ function UserProfile() {
     }
   };
 
-  // ✅ Calculer le temps depuis le dernier envoi
   const getTimeSinceEmailSent = () => {
     if (!lastEmailSent) return null;
 
@@ -203,8 +197,15 @@ function UserProfile() {
       return;
     }
 
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      setError('Format non supporté. Utilisez JPG, PNG ou WebP');
+      return;
+    }
+
     setUploadingPhoto(true);
     setError('');
+    setSuccess('');
 
     const formData = new FormData();
     formData.append('photo', file);
@@ -220,21 +221,27 @@ function UserProfile() {
 
       if (response.ok) {
         const data = await response.json();
-        setUser(prev => ({
-          ...prev,
-          profilePicture: data.profilePicture
+        setUser(prev => ({ 
+          ...prev, 
+          profilePicture: data.profilePicture 
         }));
-
-        setSuccess('Photo de profil mise à jour!');
+        
+        setSuccess('Photo de profil mise à jour avec succès!');
         setTimeout(() => setSuccess(''), 3000);
-        window.location.reload();
       } else {
-        const data = await response.json();
-        setError(data.error || 'Erreur lors de l\'upload');
+        let errorMessage = 'Erreur lors de l\'upload';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (parseError) {
+          console.error('Erreur parsing response:', parseError);
+        }
+        
+        setError(errorMessage);
       }
     } catch (error) {
-      console.error('Erreur upload photo:', error);
-      setError('Erreur lors de l\'upload de la photo');
+      console.error('Network error:', error);
+      setError('Erreur de connexion lors de l\'upload');
     } finally {
       setUploadingPhoto(false);
     }
@@ -279,14 +286,13 @@ function UserProfile() {
         setError(data.error || 'Erreur lors de l\'upload');
       }
     } catch (error) {
-      console.error('❌ Erreur upload document:', error);
+      console.error('Erreur upload document:', error);
       setError('Erreur lors de l\'upload du document');
     } finally {
       setUploadingDocument(false);
     }
   };
 
-  // ✅ Callback après vérification SMS réussie
   const handlePhoneVerificationComplete = (phone) => {
     setUser(prev => ({
       ...prev,
@@ -313,21 +319,22 @@ function UserProfile() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
       <div className="max-w-4xl mx-auto px-4">
-        {/* Header avec photo de profil */}
         <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
           <div className="flex flex-col md:flex-row items-center gap-8">
-            {/* Photo de profil */}
             <div className="relative">
               <div className="w-32 h-32 rounded-full overflow-hidden bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
                 {user?.profilePicture ? (
-                  <img
+                  <img 
                     src={`${API_URL}/users/avatar/${user.profilePicture}?t=${Date.now()}`}
                     alt="Photo de profil"
                     className="w-full h-full object-cover"
                     crossOrigin="anonymous"
                     onError={(e) => {
-                      e.target.src = `http://localhost:3001/uploads/profiles/${user.profilePicture}?t=${Date.now()}`;
-                      e.target.crossOrigin = "anonymous";
+                      console.error('Erreur chargement image:', user.profilePicture);
+                      e.target.src = `https://cheapship-back.onrender.com/uploads/profiles/${user.profilePicture}?t=${Date.now()}`;
+                    }}
+                    onLoad={() => {
+                      console.log('Image chargée:', user.profilePicture);
                     }}
                   />
                 ) : (
@@ -356,12 +363,10 @@ function UserProfile() {
               />
             </div>
 
-            {/* Informations principales */}
             <div className="flex-1 text-center md:text-left">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">{user?.fullName}</h1>
               <p className="text-gray-600 mb-4">{user?.email}</p>
 
-              {/* Rating et vérifications */}
               <div className="flex flex-wrap justify-center md:justify-start gap-4">
                 <div className="flex items-center gap-2 bg-yellow-50 px-3 py-1 rounded-full">
                   <Star className="text-yellow-500 fill-current" size={16} />
@@ -390,7 +395,6 @@ function UserProfile() {
               </div>
             </div>
 
-            {/* Bouton d'édition */}
             <button
               onClick={() => setEditing(!editing)}
               className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
@@ -401,7 +405,6 @@ function UserProfile() {
           </div>
         </div>
 
-        {/* ✅ Section Vérification Email */}
         {!emailStatus.emailVerified && (
           <div className="bg-orange-50 border border-orange-200 rounded-2xl p-6 mb-8">
             <div className="flex items-start gap-4">
@@ -469,7 +472,7 @@ function UserProfile() {
                 </div>
 
                 <div className="mt-4 p-3 bg-orange-100 rounded-lg">
-                  <h4 className="font-medium text-orange-800 text-sm mb-2">💡 Conseils :</h4>
+                  <h4 className="font-medium text-orange-800 text-sm mb-2">Conseils :</h4>
                   <ul className="text-orange-700 text-xs space-y-1">
                     <li>• Vérifiez votre dossier spam/courrier indésirable</li>
                     <li>• Le lien de vérification expire après 24 heures</li>
@@ -481,7 +484,6 @@ function UserProfile() {
           </div>
         )}
 
-        {/* Messages d'état */}
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 text-red-700">
             <AlertCircle size={20} />
@@ -503,7 +505,6 @@ function UserProfile() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Informations personnelles */}
           <div className="bg-white rounded-2xl shadow-xl p-8">
             <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
               <User className="text-blue-600" size={24} />
@@ -662,7 +663,6 @@ function UserProfile() {
             )}
           </div>
 
-          {/* Vérification d'identité */}
           <div className="bg-white rounded-2xl shadow-xl p-8">
             <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
               <Shield className="text-blue-600" size={24} />
@@ -803,7 +803,6 @@ function UserProfile() {
           </div>
         </div>
 
-        {/* Vérification du téléphone */}
         <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
           <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
             <Phone className="text-blue-600" size={24} />
@@ -877,7 +876,6 @@ function UserProfile() {
           </div>
         </div>
 
-        {/* Statistiques et historique */}
         <div className="mt-8 bg-white rounded-2xl shadow-xl p-8">
           <h2 className="text-2xl font-bold mb-6">Statistiques</h2>
           
@@ -906,7 +904,6 @@ function UserProfile() {
           </div>
         </div>
 
-        {/* Modal de vérification SMS */}
         <SMSVerification
           user={user}
           isOpen={showSMSVerification}
