@@ -9,23 +9,6 @@ import {
 
 const API_URL = 'https://cheapship-back.onrender.com/api';
 
-// Villes populaires françaises et européennes
-const POPULAR_CITIES = [
-  { name: 'Paris', country: 'France', coords: [48.8566, 2.3522], region: 'Île-de-France' },
-  { name: 'Lyon', country: 'France', coords: [45.7640, 4.8357], region: 'Auvergne-Rhône-Alpes' },
-  { name: 'Marseille', country: 'France', coords: [43.2965, 5.3698], region: 'Provence-Alpes-Côte d\'Azur' },
-  { name: 'Toulouse', country: 'France', coords: [43.6047, 1.4442], region: 'Occitanie' },
-  { name: 'Nice', country: 'France', coords: [43.7102, 7.2620], region: 'Provence-Alpes-Côte d\'Azur' },
-  { name: 'Nantes', country: 'France', coords: [47.2184, -1.5536], region: 'Pays de la Loire' },
-  { name: 'Bordeaux', country: 'France', coords: [44.8378, -0.5792], region: 'Nouvelle-Aquitaine' },
-  { name: 'Lille', country: 'France', coords: [50.6292, 3.0573], region: 'Hauts-de-France' },
-  { name: 'London', country: 'Royaume-Uni', coords: [51.5074, -0.1278], region: 'England' },
-  { name: 'Berlin', country: 'Allemagne', coords: [52.5200, 13.4050], region: 'Berlin' },
-  { name: 'Madrid', country: 'Espagne', coords: [40.4168, -3.7038], region: 'Madrid' },
-  { name: 'Rome', country: 'Italie', coords: [41.9028, 12.4964], region: 'Lazio' },
-  { name: 'Amsterdam', country: 'Pays-Bas', coords: [52.3676, 4.9041], region: 'North Holland' },
-  { name: 'Brussels', country: 'Belgique', coords: [50.8503, 4.3517], region: 'Brussels' }
-];
 
 // Mock data pour les résultats
 const mockParcels = [
@@ -759,7 +742,8 @@ const GeographicSearchSystem = ({ user, onClose }) => {
   const [showContactModal, setShowContactModal] = useState(null);
   const [showImagesModal, setShowImagesModal] = useState(null);
   const [contactLoading, setContactLoading] = useState(false);
-  
+  const [selectedCityData, setSelectedCityData] = useState(null); 
+
   // États des filtres
   const [filters, setFilters] = useState({
     maxDistance: 100,
@@ -843,32 +827,21 @@ const handleCitySearch = async (value) => {
       setFilteredCities(formattedCities);
       setShowCityResults(true);
     } else {
-      console.warn('⚠️ Aucune ville trouvée, utilisation du fallback');
-      // Fallback vers la liste statique
-      const filtered = POPULAR_CITIES.filter(city => 
-        city.name.toLowerCase().includes(value.toLowerCase()) ||
-        city.country.toLowerCase().includes(value.toLowerCase()) ||
-        city.region.toLowerCase().includes(value.toLowerCase())
-      ).slice(0, 8);
-      setFilteredCities(filtered);
-      setShowCityResults(filtered.length > 0);
-    }
-  } catch (error) {
-    console.error('❌ Erreur API cities:', error);
-    // Fallback vers la liste statique en cas d'erreur
-    const filtered = POPULAR_CITIES.filter(city => 
-      city.name.toLowerCase().includes(value.toLowerCase()) ||
-      city.country.toLowerCase().includes(value.toLowerCase()) ||
-      city.region.toLowerCase().includes(value.toLowerCase())
-    ).slice(0, 8);
-    setFilteredCities(filtered);
-    setShowCityResults(filtered.length > 0);
+  console.warn('⚠️ Aucune ville trouvée dans GeoNames');
+  setFilteredCities([]);
+  setShowCityResults(false);
+}
+} catch (error) {
+console.error('❌ Erreur API cities:', error);
+setFilteredCities([]);
+setShowCityResults(false);
   }
 };
 // Sélection d'une ville
 const selectCity = (city) => {
   setSelectedCity(city.name);
   setSearchQuery(city.name);
+  setSelectedCityData(city); // Stocker toute la ville avec coordonnées
   setShowCityResults(false);
   setFilteredCities([]);
 };
@@ -981,32 +954,23 @@ const calculateDistance = (lat1, lng1, lat2, lng2) => {
 
   // Recherche géographique
   const performSearch = async () => {
-    setLoading(true);
+  setLoading(true);
+  
+  try {
+    let baseLocation = null;
     
-    try {
-      let baseLocation = null;
-      
-      if (searchMode === 'around' && userLocation) {
-        baseLocation = { lat: userLocation.lat, lng: userLocation.lng };
-      } else if (selectedCity) {
-  // Chercher d'abord dans les villes récemment sélectionnées (GeoNames)
-  const selectedCityData = filteredCities.find(c => c.name === selectedCity);
-  if (selectedCityData) {
-    baseLocation = { lat: selectedCityData.coords[0], lng: selectedCityData.coords[1] };
-  } else {
-    // Fallback vers POPULAR_CITIES si pas trouvé
-    const city = POPULAR_CITIES.find(c => c.name === selectedCity);
-    if (city) {
-      baseLocation = { lat: city.coords[0], lng: city.coords[1] };
-    }
-  }
+    if (searchMode === 'around' && userLocation) {
+      baseLocation = { lat: userLocation.lat, lng: userLocation.lng };
+   } else if (selectedCityData) {
+  // Utiliser directement les coordonnées de la ville GeoNames sélectionnée
+  baseLocation = { lat: selectedCityData.coords[0], lng: selectedCityData.coords[1] };
 }
 
-      if (!baseLocation) {
-        alert('Veuillez sélectionner une ville ou activer la géolocalisation');
-        setLoading(false);
-        return;
-      }
+    if (!baseLocation) {
+      alert('Veuillez sélectionner une ville ou activer la géolocalisation');
+      setLoading(false);
+      return;
+    }
 
       await new Promise(resolve => setTimeout(resolve, 1500));
 
