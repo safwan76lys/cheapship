@@ -799,40 +799,72 @@ const GeographicSearchSystem = ({ user, onClose }) => {
     }
   }, []);
 
-  // Recherche automatique de villes
-  const handleCitySearch = (value) => {
-    setSearchQuery(value);
-    if (value.length > 1) {
+  // Recherche automatique de villes - CORRIGÉE pour utiliser l'API GeoNames
+const handleCitySearch = async (value) => {
+  setSearchQuery(value);
+  
+  if (value.length < 2) {
+    setFilteredCities([]);
+    setShowCityResults(false);
+    return;
+  }
+
+  console.log('🔍 Recherche GeoNames pour:', value);
+
+  try {
+    const response = await fetch(`${API_URL}/cities/search?q=${encodeURIComponent(value)}&limit=8`);
+    console.log('📥 Statut réponse:', response.status);
+    
+    const data = await response.json();
+    console.log('📄 Données reçues:', data);
+
+    if (data.success && data.cities && Array.isArray(data.cities)) {
+      // Format de votre backend cities.js
+      const formattedCities = data.cities.map(city => ({
+        name: city.name,
+        country: city.country,
+        region: city.region,
+        coords: [city.coordinates.lat, city.coordinates.lng],
+        countryCode: city.countryCode
+      }));
+      console.log('✅ Villes formatées:', formattedCities);
+      setFilteredCities(formattedCities);
+      setShowCityResults(true);
+    } else if (data.geonames && Array.isArray(data.geonames)) {
+      // Format direct GeoNames (fallback)
+      const formattedCities = data.geonames.map(city => ({
+        name: city.name,
+        country: city.countryName,
+        region: city.adminName1,
+        coords: [parseFloat(city.lat), parseFloat(city.lng)],
+        countryCode: city.countryCode
+      }));
+      console.log('✅ Villes GeoNames directes:', formattedCities);
+      setFilteredCities(formattedCities);
+      setShowCityResults(true);
+    } else {
+      console.warn('⚠️ Aucune ville trouvée, utilisation du fallback');
+      // Fallback vers la liste statique
       const filtered = POPULAR_CITIES.filter(city => 
         city.name.toLowerCase().includes(value.toLowerCase()) ||
         city.country.toLowerCase().includes(value.toLowerCase()) ||
         city.region.toLowerCase().includes(value.toLowerCase())
       ).slice(0, 8);
       setFilteredCities(filtered);
-      setShowCityResults(true);
-    } else {
-      setShowCityResults(false);
+      setShowCityResults(filtered.length > 0);
     }
-  };
-
-  // Sélection d'une ville
-  const selectCity = (city) => {
-    setSelectedCity(city.name);
-    setSearchQuery(city.name);
-    setShowCityResults(false);
-  };
-
-  // Calcul de distance entre deux points
-  const calculateDistance = (lat1, lng1, lat2, lng2) => {
-    const R = 6371;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLng = (lng2 - lng1) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-              Math.sin(dLng/2) * Math.sin(dLng/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
-  };
+  } catch (error) {
+    console.error('❌ Erreur API cities:', error);
+    // Fallback vers la liste statique en cas d'erreur
+    const filtered = POPULAR_CITIES.filter(city => 
+      city.name.toLowerCase().includes(value.toLowerCase()) ||
+      city.country.toLowerCase().includes(value.toLowerCase()) ||
+      city.region.toLowerCase().includes(value.toLowerCase())
+    ).slice(0, 8);
+    setFilteredCities(filtered);
+    setShowCityResults(filtered.length > 0);
+  }
+};
 
   // Fonctions pour les favoris
   const toggleFavorite = async (itemId) => {
