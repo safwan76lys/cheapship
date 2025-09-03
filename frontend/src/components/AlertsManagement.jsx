@@ -16,7 +16,7 @@ const AlertsManagement = ({ user }) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // États pour l'autocomplétion des villes (version intégrée)
+  // États pour l'autocomplétion des villes (corrigés pour GeoNames)
   const [departureCities, setDepartureCities] = useState([]);
   const [arrivalCities, setArrivalCities] = useState([]);
   const [showDepartureResults, setShowDepartureResults] = useState(false);
@@ -39,7 +39,6 @@ const AlertsManagement = ({ user }) => {
     maxPrice: '',
     maxWeight: '',
     departureDateFlex: 7,
-    desiredDate: '', // NOUVEAU : Date souhaitée
     radius: 500,
     description: ''
   });
@@ -122,7 +121,6 @@ const AlertsManagement = ({ user }) => {
           maxPrice: '',
           maxWeight: '',
           departureDateFlex: 7,
-          desiredDate: '', // NOUVEAU : Reset date
           radius: 500,
           description: ''
         });
@@ -187,7 +185,7 @@ const AlertsManagement = ({ user }) => {
     }
   };
 
-  // Fonction de recherche de villes avec API GeoNames
+  // Fonction de recherche de villes avec API GeoNames corrigée
   const searchCities = async (query, setResults, setLoading, setShowResults) => {
     if (query.length < 2) {
       setResults([]);
@@ -208,16 +206,34 @@ const AlertsManagement = ({ user }) => {
       const data = await response.json();
       console.log('📄 Response data:', data); // Debug
       
-      if (data.success && data.cities) {
+      // ✅ GESTION DES DIFFÉRENTS FORMATS DE RÉPONSE
+      if (data.success && data.cities && Array.isArray(data.cities)) {
+        // Format attendu de votre backend cities.js
         const formattedCities = data.cities.map(city => ({
-          id: city.id,
+          id: city.id || city.geonameId,
           name: city.name,
-          displayName: `${city.name}, ${city.region ? city.region + ', ' : ''}${city.country}`,
+          displayName: `${city.name}${city.region ? ', ' + city.region : ''}, ${city.country}`,
           country: city.country,
           countryCode: city.countryCode?.toLowerCase(),
           coordinates: city.coordinates
         }));
         console.log('✅ Formatted cities:', formattedCities); // Debug
+        setResults(formattedCities);
+        setShowResults(true);
+      } else if (data.geonames && Array.isArray(data.geonames)) {
+        // Format direct de GeoNames (fallback)
+        const formattedCities = data.geonames.map(city => ({
+          id: city.geonameId,
+          name: city.name,
+          displayName: `${city.name}${city.adminName1 ? ', ' + city.adminName1 : ''}, ${city.countryName}`,
+          country: city.countryName,
+          countryCode: city.countryCode?.toLowerCase(),
+          coordinates: {
+            lat: parseFloat(city.lat),
+            lng: parseFloat(city.lng)
+          }
+        }));
+        console.log('✅ GeoNames direct format:', formattedCities); // Debug
         setResults(formattedCities);
         setShowResults(true);
       } else {
@@ -333,121 +349,6 @@ const AlertsManagement = ({ user }) => {
       }
     };
   }, []);
-
-  // NOUVEAU : Fonction pour modifier une alerte
-  const handleEditAlert = (alert) => {
-    setEditingAlert(alert);
-    setAlertForm({
-      type: alert.type,
-      departureCity: alert.departureCity,
-      arrivalCity: alert.arrivalCity,
-      maxPrice: alert.maxPrice?.toString() || '',
-      maxWeight: alert.maxWeight?.toString() || '',
-      departureDateFlex: alert.departureDateFlex || 7,
-      // Adapter selon votre backend qui stocke dans departureDate
-      desiredDate: alert.departureDate ? new Date(alert.departureDate).toISOString().split('T')[0] : '',
-      radius: alert.radius || 500,
-      description: alert.description || ''
-    });
-    setShowCreateForm(true);
-  };
-
-  // NOUVEAU : Fonction pour sauvegarder une alerte modifiée
-  const handleUpdateAlert = async () => {
-    setError('');
-    setSuccess('');
-
-    if (!alertForm.departureCity || !alertForm.arrivalCity) {
-      setError('Les villes de départ et d\'arrivée sont requises');
-      return;
-    }
-
-    try {
-      // Préparer les données selon le format attendu par votre backend
-      const updateData = {
-        type: alertForm.type,
-        departureCity: alertForm.departureCity,
-        arrivalCity: alertForm.arrivalCity,
-        maxPrice: alertForm.maxPrice ? parseFloat(alertForm.maxPrice) : null,
-        maxWeight: alertForm.maxWeight ? parseFloat(alertForm.maxWeight) : null,
-        departureDateFlex: alertForm.departureDateFlex,
-        radius: alertForm.radius,
-        description: alertForm.description || null,
-        // Adaptation pour votre backend qui attend ces champs :
-        departureDate: alertForm.desiredDate ? new Date(alertForm.desiredDate).toISOString() : null,
-        departureLat: null, // À adapter si vous avez les coordonnées
-        departureLng: null, // À adapter si vous avez les coordonnées
-        expiresAt: null // À adapter si vous gérez l'expiration
-      };
-
-      console.log('🔄 Updating alert:', editingAlert.id, updateData); // Debug
-
-      const response = await fetch(`${API_URL}/alerts/${editingAlert.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(updateData)
-      });
-
-      console.log('📥 Update response status:', response.status); // Debug
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log('✅ Update response data:', data); // Debug
-        
-        setAlerts(prev => prev.map(a => a.id === editingAlert.id ? data.alert : a));
-        setShowCreateForm(false);
-        setEditingAlert(null);
-        setAlertForm({
-          type: 'PARCEL_NEEDED',
-          departureCity: '',
-          arrivalCity: '',
-          maxPrice: '',
-          maxWeight: '',
-          departureDateFlex: 7,
-          desiredDate: '',
-          radius: 500,
-          description: ''
-        });
-        setDepartureCities([]);
-        setArrivalCities([]);
-        setShowDepartureResults(false);
-        setShowArrivalResults(false);
-        setSuccess('Alerte modifiée avec succès !');
-        fetchStats();
-      } else {
-        const errorData = await response.json();
-        console.error('❌ Update error:', errorData); // Debug
-        setError(errorData.error || 'Erreur lors de la modification');
-      }
-    } catch (error) {
-      console.error('❌ Network error:', error); // Debug
-      setError('Erreur de connexion');
-    }
-  };
-
-  // NOUVEAU : Fonction pour annuler la modification
-  const handleCancelEdit = () => {
-    setEditingAlert(null);
-    setShowCreateForm(false);
-    setAlertForm({
-      type: 'PARCEL_NEEDED',
-      departureCity: '',
-      arrivalCity: '',
-      maxPrice: '',
-      maxWeight: '',
-      departureDateFlex: 7,
-      desiredDate: '',
-      radius: 500,
-      description: ''
-    });
-    setDepartureCities([]);
-    setArrivalCities([]);
-    setShowDepartureResults(false);
-    setShowArrivalResults(false);
-  };
 
   const getAlertTypeIcon = (type) => {
     switch (type) {
@@ -569,15 +470,13 @@ const AlertsManagement = ({ user }) => {
           </div>
         )}
 
-        {/* Formulaire de création/modification */}
+        {/* Formulaire de création */}
         {showCreateForm && (
           <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">
-                {editingAlert ? 'Modifier l\'alerte' : 'Créer une nouvelle alerte'}
-              </h2>
+              <h2 className="text-2xl font-bold text-gray-900">Créer une nouvelle alerte</h2>
               <button
-                onClick={editingAlert ? handleCancelEdit : () => setShowCreateForm(false)}
+                onClick={() => setShowCreateForm(false)}
                 className="text-gray-500 hover:text-gray-700"
               >
                 ×
@@ -615,22 +514,7 @@ const AlertsManagement = ({ user }) => {
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Date souhaitée (optionnel)
-                  </label>
-                  <input
-                    type="date"
-                    value={alertForm.desiredDate}
-                    onChange={(e) => setAlertForm({...alertForm, desiredDate: e.target.value})}
-                    min={new Date().toISOString().split('T')[0]}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    La recherche se fera autour de cette date selon la flexibilité choisie
-                  </p>
-                </div>
-
+                {/* 🔥 CHAMP VILLE DE DÉPART CORRIGÉ */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Ville de départ
@@ -702,6 +586,7 @@ const AlertsManagement = ({ user }) => {
                   </div>
                 </div>
 
+                {/* 🔥 CHAMP VILLE D'ARRIVÉE CORRIGÉ */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Ville d'arrivée
@@ -839,13 +724,13 @@ const AlertsManagement = ({ user }) => {
 
               <div className="flex gap-4">
                 <button
-                  onClick={editingAlert ? handleUpdateAlert : handleCreateAlert}
+                  onClick={handleCreateAlert}
                   className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors"
                 >
-                  {editingAlert ? 'Modifier l\'alerte' : 'Créer l\'alerte'}
+                  Créer l'alerte
                 </button>
                 <button
-                  onClick={editingAlert ? handleCancelEdit : () => setShowCreateForm(false)}
+                  onClick={() => setShowCreateForm(false)}
                   className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
                 >
                   Annuler
@@ -928,15 +813,6 @@ const AlertsManagement = ({ user }) => {
                         <Target size={16} />
                         <span className="text-sm">{alert.radius} km</span>
                       </div>
-
-                      {alert.departureDate && (
-                        <div className="flex items-center gap-2 text-gray-600">
-                          <Clock size={16} />
-                          <span className="text-sm">
-                            {new Date(alert.departureDate).toLocaleDateString('fr-FR')}
-                          </span>
-                        </div>
-                      )}
                     </div>
 
                     {alert.description && (
@@ -952,7 +828,7 @@ const AlertsManagement = ({ user }) => {
 
                   <div className="flex items-center gap-2 ml-4">
                     <button
-                      onClick={() => handleEditAlert(alert)}
+                      onClick={() => setEditingAlert(alert)}
                       className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                       title="Modifier"
                     >
