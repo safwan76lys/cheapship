@@ -989,11 +989,18 @@ const calculateDistance = (lat1, lng1, lat2, lng2) => {
       if (searchMode === 'around' && userLocation) {
         baseLocation = { lat: userLocation.lat, lng: userLocation.lng };
       } else if (selectedCity) {
-        const city = POPULAR_CITIES.find(c => c.name === selectedCity);
-        if (city) {
-          baseLocation = { lat: city.coords[0], lng: city.coords[1] };
-        }
-      }
+  // Chercher d'abord dans les villes récemment sélectionnées (GeoNames)
+  const selectedCityData = filteredCities.find(c => c.name === selectedCity);
+  if (selectedCityData) {
+    baseLocation = { lat: selectedCityData.coords[0], lng: selectedCityData.coords[1] };
+  } else {
+    // Fallback vers POPULAR_CITIES si pas trouvé
+    const city = POPULAR_CITIES.find(c => c.name === selectedCity);
+    if (city) {
+      baseLocation = { lat: city.coords[0], lng: city.coords[1] };
+    }
+  }
+}
 
       if (!baseLocation) {
         alert('Veuillez sélectionner une ville ou activer la géolocalisation');
