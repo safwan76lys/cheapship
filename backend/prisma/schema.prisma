@@ -1,9 +1,10 @@
+// schema.prisma - Correction pour MySQL Railway
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"  // ← CHANGÉ de postgresql à mysql
   url      = env("DATABASE_URL")
 }
 
@@ -15,7 +16,12 @@ model User {
   phone                      String?
   emailVerified              Boolean                   @default(false)
   phoneVerified              Boolean                   @default(false)
-  profilePicture             String?
+  
+  // Stockage BLOB pour images
+  profilePicture             Bytes?                    @db.MediumBlob
+  profilePictureType         String?
+  profilePictureName         String?
+  
   rating                     Float                     @default(0)
   totalRatings               Int                       @default(0)
   isActive                   Boolean                   @default(true)
@@ -31,12 +37,22 @@ model User {
   birthDate                  DateTime?
   city                       String?
   country                    String?                   @default("France")
-  identityDocument           String?
+  
+  // Document d'identité en BLOB
+  identityDocument           Bytes?                    @db.MediumBlob
+  identityDocumentType       String?
+  identityDocumentName       String?
   identityVerified           Boolean                   @default(false)
   identityVerifiedAt         DateTime?
+  
   postalCode                 String?
-  aiAnalysisResult           String?
-  identityVerificationStatus String?                   @default("pending")
+  aiAnalysisResult           String?                   @db.Text
+  identityVerificationStatus String?                  @default("pending")
+  phoneVerificationToken     String?
+  phoneVerificationExpires   DateTime?
+  phoneVerificationAttempts  Int                      @default(0)
+
+  // Relations
   items                      Item[]                    @relation("ItemOwner")
   receivedMessages           Message[]                 @relation("MessageReceiver")
   sentMessages               Message[]                 @relation("MessageSender")
@@ -48,11 +64,9 @@ model User {
   conversationParticipants   ConversationParticipant[]
   favorites                  Favorite[]
   notifications              Notification[]
-  phoneVerificationToken    String?
-  phoneVerificationExpires  DateTime?
-  phoneVerificationAttempts Int       @default(0) // Compteur tentatives
 
   @@index([email])
+  @@map("users")
 }
 
 model Trip {
@@ -66,17 +80,19 @@ model Trip {
   arrivalDate      DateTime
   availableWeight  Float
   pricePerKg       Float
-  description      String?
+  description      String?        @db.Text
   status           TripStatus     @default(ACTIVE)
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
+  
   items            Item[]
   reviews          Review[]
-  user             User           @relation("TripOwner", fields: [userId], references: [id])
+  user             User           @relation("TripOwner", fields: [userId], references: [id], onDelete: Cascade)
   conversations    Conversation[]
 
   @@index([userId])
   @@index([status])
+  @@map("trips")
 }
 
 model Item {
@@ -84,11 +100,11 @@ model Item {
   userId          String
   tripId          String?
   name            String
-  description     String
+  description     String         @db.Text
   weight          Float
   value           Float
   category        String
-  images          String[]
+  images          Json           @default("[]") // JSON pour MySQL
   pickupCity      String
   pickupCountry   String
   deliveryCity    String
@@ -100,27 +116,29 @@ model Item {
   fragile         Boolean        @default(false)
   insurance       Boolean        @default(false)
   maxPrice        Float?
-  notes           String?
+  notes           String?        @db.Text
   pickupDate      DateTime
   urgency         String         @default("normal")
-  trip            Trip?          @relation(fields: [tripId], references: [id])
-  user            User           @relation("ItemOwner", fields: [userId], references: [id])
+  
+  trip            Trip?          @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  user            User           @relation("ItemOwner", fields: [userId], references: [id], onDelete: Cascade)
   conversations   Conversation[]
   favorites       Favorite[]
 
   @@index([userId])
   @@index([status])
   @@index([pickupCity, deliveryCity])
+  @@map("items")
 }
 
 model Message {
   id             String        @id @default(cuid())
   senderId       String
   receiverId     String
-  content        String
+  content        String        @db.Text
   read           Boolean       @default(false)
   createdAt      DateTime      @default(now())
-  attachments    String[]      @default([])
+  attachments    Json          @default("[]")
   conversationId String?
   messageType    MessageType   @default(TEXT)
   metadata       Json?
@@ -128,13 +146,16 @@ model Message {
   replyToId      String?
   status         MessageStatus @default(SENT)
   updatedAt      DateTime      @default(now()) @updatedAt
-  conversation   Conversation? @relation(fields: [conversationId], references: [id])
-  receiver       User          @relation("MessageReceiver", fields: [receiverId], references: [id])
-  replyTo        Message?      @relation("MessageReply", fields: [replyToId], references: [id])
+  
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  receiver       User          @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  replyTo        Message?      @relation("MessageReply", fields: [replyToId], references: [id], onDelete: SetNull)
   replies        Message[]     @relation("MessageReply")
-  sender         User          @relation("MessageSender", fields: [senderId], references: [id])
+  sender         User          @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
 
   @@index([senderId, receiverId])
+  @@index([conversationId])
+  @@map("messages")
 }
 
 model Review {
@@ -143,15 +164,17 @@ model Review {
   receiverId String
   tripId     String?
   rating     Int
-  comment    String?
+  comment    String?  @db.Text
   createdAt  DateTime @default(now())
-  author     User     @relation("ReviewAuthor", fields: [authorId], references: [id])
-  receiver   User     @relation("ReviewReceiver", fields: [receiverId], references: [id])
-  trip       Trip?    @relation(fields: [tripId], references: [id])
+  
+  author     User     @relation("ReviewAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  receiver   User     @relation("ReviewReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  trip       Trip?    @relation(fields: [tripId], references: [id], onDelete: SetNull)
 
   @@unique([authorId, receiverId, tripId])
   @@index([authorId])
   @@index([receiverId])
+  @@map("reviews")
 }
 
 model Conversation {
@@ -163,11 +186,14 @@ model Conversation {
   lastMessageAt DateTime                  @default(now())
   createdAt     DateTime                  @default(now())
   updatedAt     DateTime                  @updatedAt
+  
   messages      Message[]
   participants  ConversationParticipant[]
   item          Item?                     @relation(fields: [itemId], references: [id], onDelete: Cascade)
   trip          Trip?                     @relation(fields: [tripId], references: [id], onDelete: Cascade)
 
+  @@index([tripId])
+  @@index([itemId])
   @@map("conversations")
 }
 
@@ -179,10 +205,12 @@ model ConversationParticipant {
   joinedAt       DateTime        @default(now())
   lastReadAt     DateTime        @default(now())
   muted          Boolean         @default(false)
+  
   conversation   Conversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([conversationId, userId])
+  @@index([userId])
   @@map("conversation_participants")
 }
 
@@ -193,11 +221,13 @@ model Favorite {
   tripId    String?
   type      FavoriteType
   createdAt DateTime     @default(now())
+  
   item      Item?        @relation(fields: [itemId], references: [id], onDelete: Cascade)
   user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, itemId])
   @@unique([userId, tripId])
+  @@index([userId])
   @@map("favorites")
 }
 
@@ -205,15 +235,18 @@ model Notification {
   id        String           @id @default(cuid())
   userId    String
   title     String
-  content   String
+  content   String           @db.Text
   type      NotificationType
   relatedId String?
   metadata  Json?
   read      Boolean          @default(false)
   readAt    DateTime?
   createdAt DateTime         @default(now())
+  
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
+  @@index([read])
   @@map("notifications")
 }
 
@@ -228,16 +261,19 @@ model Alert {
   departureDateFlex Int?
   maxPrice          Float?
   maxWeight         Float?
-  description       String?
+  description       String?             @db.Text
   departureLat      Float?
   departureLng      Float?
   radius            Int                 @default(500)
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
   expiresAt         DateTime?
+  
   notifications     AlertNotification[]
   user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
+  @@index([status])
   @@map("alerts")
 }
 
@@ -249,16 +285,20 @@ model AlertNotification {
   triggerType AlertTriggerType
   status      AlertNotificationStatus @default(PENDING)
   title       String
-  message     String
+  message     String                  @db.Text
   actionUrl   String?
   createdAt   DateTime                @default(now())
   viewedAt    DateTime?
+  
   alert       Alert                   @relation(fields: [alertId], references: [id], onDelete: Cascade)
   user        User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
+  @@index([status])
   @@map("alert_notifications")
 }
 
+// Enums
 enum UserRole {
   USER
   ADMIN
