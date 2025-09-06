@@ -51,7 +51,7 @@ class SocketService {
       console.error('Socket.IO connection error:', error);
       
       // ✅ Message spécial pour la production Render
-      if (API_CONFIG.socketURL.includes('onrender.com')) {
+      if (API_CONFIG.socketURL.includes('railway.app')) {
         console.log('⏳ Render service might be starting up, retrying...');
       }
     });

@@ -331,7 +331,7 @@ function UserProfile() {
                     crossOrigin="anonymous"
                     onError={(e) => {
                       console.error('Erreur chargement image:', user.profilePicture);
-                      e.target.src = `https://cheapship-back.onrender.com/uploads/profiles/${user.profilePicture}?t=${Date.now()}`;
+                      e.target.src = `https://cheapship-production.up.railway.app/uploads/profiles/${user.profilePicture}?t=${Date.now()}`;
                     }}
                     onLoad={() => {
                       console.log('Image chargée:', user.profilePicture);
