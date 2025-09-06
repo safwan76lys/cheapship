@@ -5,7 +5,7 @@ import {
   Calendar, ArrowUp, ArrowDown, Activity, Zap
 } from 'lucide-react'
 
-const API_URL = 'https://cheapship-back.onrender.com/api'
+const API_URL = 'https://cheapship-production.up.railway.app/api'
 
 function AnalyticsDashboard({ user }) {
   const [analytics, setAnalytics] = useState(null)

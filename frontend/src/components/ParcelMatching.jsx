@@ -22,7 +22,7 @@ import {
   Send
 } from 'lucide-react'
 
-const API_URL = 'https://cheapship-back.onrender.com/api'
+const API_URL = 'https://cheapship-production.up.railway.app/api'
 
 // Scores de compatibilité
 const COMPATIBILITY_SCORES = {

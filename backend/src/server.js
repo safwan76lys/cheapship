@@ -78,8 +78,9 @@ const allowedOrigins = (() => {
     'http://127.0.0.1:5173',
     'http://127.0.0.1:3000',
     
-    // URLs de production Render (IMPORTANT)
-    'https://cheapship-frontend.onrender.com'
+    // URLs de production Railway (IMPORTANT)
+    'https://cheapship-frontend-production.up.railway.app',
+    'wss://cheapship-production.up.railway.app',
   ];
 
   // Ajout conditionnel pour production
@@ -1181,7 +1182,7 @@ if (process.env.NODE_ENV !== 'test') {
 
       // URL dynamique selon l'environnement
       const socketUrl = process.env.NODE_ENV === 'production' 
-        ? `wss://cheapship-back.onrender.com`
+        ? `wss://cheapship-production.up.railway.app`
         : `ws://localhost:${PORT}`;
       console.log(`   • Connection URL: ${socketUrl}`);
     }

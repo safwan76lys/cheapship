@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 // import socketService from '../services/socketService'; // Décommentez quand vous créez le service
 
-const API_URL = 'https://cheapship-back.onrender.com/api' ;
+const API_URL = 'https://cheapship-production.up.railway.app/api' ;
 
 
 // Mock data

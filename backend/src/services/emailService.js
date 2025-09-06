@@ -23,7 +23,7 @@ class EmailService {
     const frontendUrl = process.env.FRONTEND_URL 
   ? process.env.FRONTEND_URL.replace(/\/$/, '') // enlève le / final si présent
   : (process.env.NODE_ENV === 'production'
-      ? 'https://cheapship-frontend.onrender.com'
+      ? 'https://cheapship-frontend-production.up.railway.app'
       : 'http://localhost:5173');
 
 const verificationUrl = `${frontendUrl}/auth?token=${token}&verify=true`;

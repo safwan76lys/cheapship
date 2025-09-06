@@ -41,7 +41,7 @@ import MessagingSystem from './MessagingSystem';
 import GeographicSearch from './GeographicSearch';
 import AlertsManagement from './AlertsManagement';
 
-const API_URL = 'https://cheapship-back.onrender.com/api';
+const API_URL = 'https://cheapship-production.up.railway.app/api';
 
 // Composant Analytics
 function AnalyticsDashboard({ user }) {

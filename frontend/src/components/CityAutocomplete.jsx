@@ -5,7 +5,7 @@ import {
   Loader, Filter, Search, TrendingUp, Clock, Target, Globe, X
 } from 'lucide-react';
 
-const API_URL = 'https://cheapship-back.onrender.com/api';
+const API_URL = 'https://cheapship-production.up.railway.app/api';
 
 const AlertsManagement = ({ user }) => {
   const [alerts, setAlerts] = useState([]);

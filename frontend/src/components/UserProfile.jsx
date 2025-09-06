@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import SMSVerification, { PhoneVerificationBadge } from './SMSVerification';
 
-const API_URL = 'https://cheapship-back.onrender.com/api';
+const API_URL = 'https://cheapship-production.up.railway.app/api';
 
 function UserProfile() {
   const [user, setUser] = useState(null);

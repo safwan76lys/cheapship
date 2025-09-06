@@ -23,7 +23,7 @@ import {
 } from 'lucide-react'
 import SMSVerification, { PhoneVerificationGuard } from './SMSVerification';
 
-const API_URL = 'https://cheapship-back.onrender.com/api'
+const API_URL = 'https://cheapship-production.up.railway.app/api'
 
 // Composant d'autocomplétion des villes avec API GeoNames
 const CityAutocomplete = ({ value, onChange, placeholder }) => {

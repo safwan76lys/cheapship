@@ -20,8 +20,8 @@ const validateUrl = (url, name) => {
 // Configuration principale
 
 export const API_CONFIG = {
-  baseURL: import.meta.env.VITE_API_URL || 'https://cheapship-back.onrender.com/api',
-  socketURL: import.meta.env.VITE_SOCKET_URL || 'https://cheapship-back.onrender.com',
+  baseURL: import.meta.env.VITE_API_URL || 'https://cheapship-production.up.railway.app/api',
+  socketURL: import.meta.env.VITE_SOCKET_URL || 'https://cheapship-production.up.railway.app',
   timeout: parseInt(import.meta.env.VITE_API_TIMEOUT) || 30000
 };
 console.log('🔧 ENV Debug:', import.meta.env);

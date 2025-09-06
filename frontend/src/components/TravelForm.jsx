@@ -19,7 +19,7 @@ import {
 import SMSVerification, { PhoneVerificationGuard } from './SMSVerification';
 
 // ✅ CORRECTION : URL sans espaces
-const API_URL = 'https://cheapship-back.onrender.com/api';
+const API_URL = 'https://cheapship-production.up.railway.app/api';
 
 function TravelForm() {
   const [loading, setLoading] = useState(false);
