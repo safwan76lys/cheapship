@@ -18,7 +18,7 @@ model User {
   phoneVerified              Boolean                   @default(false)
   
   // Stockage BLOB pour images
-  profilePicture             Bytes?                    @db.MediumBlob
+  profilePicture             String?                    @db.MediumBlob
   profilePictureType         String?
   profilePictureName         String?
   
